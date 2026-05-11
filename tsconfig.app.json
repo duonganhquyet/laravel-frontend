@@ -4,7 +4,6 @@
     "target": "es2023",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
     "module": "esnext",
-    "types": ["vite/client"],
     "skipLibCheck": true,
 
     /* Bundler mode */
@@ -23,3 +22,4 @@
   },
   "include": ["src"]
 }
+ 

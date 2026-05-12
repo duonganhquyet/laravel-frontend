@@ -1,26 +1,26 @@
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/auth.store";
-import { loginApi } from "../api/auth.api";
+import { authApi, type LoginPayload } from "../api/auth.api";
 import { useState } from "react";
 
 export const LoginPage = () => {
   const navigate = useNavigate();
-  const { setToken, setUser } = useAuthStore();
+  const { setAuth } = useAuthStore();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = async (formData: any) => {
+  const handleLogin = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
     setLoading(true);
+
+    const formData: LoginPayload = { email, password };
+
     try {
-      const res = await loginApi(formData);
+      const res = await authApi.login(formData);
 
-      if (res.success) {
-        // 1. Lưu token vào localStorage và Store
-        setToken(res.data.accessToken);
-
-        // 2. Lưu thông tin user (đã có fullName, avatar) vào Store
-        setUser(res.data.user);
-
-        // 3. Điều hướng vào trang chat chính
+      if (res.data) {
+        setAuth(res.data.user, res.data.accessToken);
         navigate("/chat");
       }
     } catch (error: any) {
@@ -32,7 +32,37 @@ export const LoginPage = () => {
   };
 
   return (
-    // ... JSX của form đăng nhập gọi handleLogin khi submit
-    <div>Form Login của bạn</div>
+    <div className="p-4 max-w-md mx-auto">
+      <h1 className="text-xl font-bold mb-4">Đăng nhập</h1>
+      <form onSubmit={handleLogin} className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1">Email</label>
+          <input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className="w-full px-3 py-2 border rounded"
+            required
+          />
+        </div>
+        <div>
+          <label className="block text-sm font-medium mb-1">Mật khẩu</label>
+          <input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            className="w-full px-3 py-2 border rounded"
+            required
+          />
+        </div>
+        <button
+          type="submit"
+          disabled={loading}
+          className="w-full px-4 py-2 bg-blue-600 text-white rounded"
+        >
+          {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+        </button>
+      </form>
+    </div>
   );
 };

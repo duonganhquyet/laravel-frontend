@@ -1,25 +1,31 @@
-import { create } from "zustand";
+import { create } from 'zustand';
+import type { Conversation } from '../types/conversation.type';
+import type { Message } from '../types/message.type';
 
 interface ChatState {
-  messages: any[];
-  setMessages: (messages: any[]) => void;
-  prependMessages: (oldMessages: any[]) => void; 
-  addMessage: (message: any) => void;
+  chats: Conversation[];
+  currentChat: Conversation | null;
+  messages: Message[];
+
+  setChats: (chats: Conversation[]) => void;
+  setCurrentChat: (chat: Conversation) => void;
+  setMessages: (messages: Message[]) => void;
+  prependMessages: (messages: Message[]) => void;
+  addMessage: (msg: Message) => void;
 }
 
 export const useChatStore = create<ChatState>((set) => ({
+  chats: [],
+  currentChat: null,
   messages: [],
-  setMessages: (messages) => set({ messages }),
-  
-  // Nối tin nhắn cũ vào phía trước mảng hiện tại
-  prependMessages: (oldMessages) => 
-    set((state) => ({ messages: [...oldMessages, ...state.messages] })),
 
-  addMessage: (message) =>
-    set((state) => ({ 
-      // Kiểm tra tránh trùng lặp tin nhắn nếu socket gửi về tin vừa tạo
-      messages: state.messages.some(m => m._id === message._id) 
-        ? state.messages 
-        : [...state.messages, message] 
+  setChats: (chats) => set({ chats }),
+  setCurrentChat: (chat) => set({ currentChat: chat }),
+  setMessages: (messages) => set({ messages }),
+  prependMessages: (oldMessages) =>
+    set((state) => ({ messages: [...oldMessages, ...state.messages] })),
+  addMessage: (msg) =>
+    set((state) => ({
+      messages: [...state.messages, msg],
     })),
 }));

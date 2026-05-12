@@ -1,39 +1,24 @@
-import { create } from "zustand";
+import { create } from 'zustand';
+import type { User } from '../types/user.type';
 
-// Định nghĩa kiểu dữ liệu User đồng bộ với Backend
-type User = {
-  _id: string;
-  fullName: string; // Đồng bộ với schema Backend
-  email: string;
-  avatar: string | null; // Thêm trường avatar để hiển thị ảnh
-};
-
-type AuthState = {
-  token: string | null;
+interface AuthState {
   user: User | null;
-  setToken: (token: string | null) => void;
-  setUser: (user: User | null) => void;
+  token: string | null;
+  setAuth: (user: User, token: string) => void;
   logout: () => void;
-};
+}
 
 export const useAuthStore = create<AuthState>((set) => ({
-  // Khởi tạo token từ localStorage để giữ phiên đăng nhập khi F5
-  token: typeof window !== "undefined" ? localStorage.getItem("token") : null,
-  user: null,
-
-  setToken: (token) => {
-    if (token) {
-      localStorage.setItem("token", token);
-    } else {
-      localStorage.removeItem("token");
-    }
-    set({ token });
+  user: JSON.parse(localStorage.getItem('user') || 'null'),
+  token: localStorage.getItem('token') || null,
+  setAuth: (user, token) => {
+    localStorage.setItem('user', JSON.stringify(user));
+    localStorage.setItem('token', token);
+    set({ user, token });
   },
-
-  setUser: (user) => set({ user }),
-
   logout: () => {
-    localStorage.removeItem("token");
-    set({ token: null, user: null });
+    localStorage.removeItem('user');
+    localStorage.removeItem('token');
+    set({ user: null, token: null });
   },
 }));

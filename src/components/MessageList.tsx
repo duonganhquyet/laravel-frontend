@@ -57,32 +57,29 @@ export const MessageList = ({ conversationId }: { conversationId: string }) => {
       )}
 
       {messages.map((msg, index) => {
-        // Xử lý an toàn cho senderId
-        const sender = typeof msg.senderId === "object" ? msg.senderId : null;
-        const senderId = sender?._id || msg.senderId;
+        // Xử lý an toàn cho SenderId
+        const senderId = msg.SenderId;
         
         if (!user || !senderId) return null;
         
-        const isMine = senderId === user._id;
+        const isMine = senderId === user.UserId;
         
         // Kiểm tra xem có cần hiển thị day separator
         const prevMsg = index > 0 ? messages[index - 1] : null;
-        const showDaySeparator = !prevMsg || !isSameDay(prevMsg.createdAt, msg.createdAt);
+        const showDaySeparator = !prevMsg || !isSameDay(prevMsg.CreatedAt, msg.CreatedAt);
         
         // Kiểm tra xem có cần hiển thị avatar/sender name
-        const nextMsg = index < messages.length - 1 ? messages[index + 1] : null;
-        const isLastFromSender = !nextMsg || !isSameSender(msg, nextMsg);
         const isFirstFromSender = !prevMsg || !isSameSender(msg, prevMsg);
         const showAvatar = !isMine && isFirstFromSender;
         
         return (
-          <div key={msg._id}>
+          <div key={msg.MessageId}>
             {/* Day separator */}
             {showDaySeparator && (
               <div className="flex items-center justify-center gap-2 py-3">
                 <div className="flex-1 h-px bg-gray-600"></div>
                 <p className="text-center text-gray-400 text-xs whitespace-nowrap">
-                  {formatDaySeparator(msg.createdAt)}
+                  {formatDaySeparator(msg.CreatedAt)}
                 </p>
                 <div className="flex-1 h-px bg-gray-600"></div>
               </div>
@@ -98,8 +95,8 @@ export const MessageList = ({ conversationId }: { conversationId: string }) => {
               ) : showAvatar ? (
                 // Hiển thị avatar khi là tin đầu từ người này
                 <ChatAvatar 
-                  avatarUrl={sender?.avatar} 
-                  fullName={sender?.fullName || "User"} 
+                  avatarUrl={null} 
+                  fullName={"User"} 
                   size={32} 
                 />
               ) : (
@@ -111,7 +108,7 @@ export const MessageList = ({ conversationId }: { conversationId: string }) => {
                 {/* Sender name (chỉ hiển thị khi không có avatar hoặc là tin từ người khác) */}
                 {!isMine && isFirstFromSender && (
                   <p className="text-xs text-gray-300 px-1">
-                    {sender?.fullName || "User"}
+                    {"User"}
                   </p>
                 )}
                 
@@ -122,10 +119,10 @@ export const MessageList = ({ conversationId }: { conversationId: string }) => {
                     : "bg-[#182533] rounded-bl-none"
                 }`}>
                   <p className="text-sm whitespace-pre-wrap break-words">
-                    {msg.content}
+                    {msg.Content}
                   </p>
                   <span className="block text-xs text-gray-400 text-right mt-1">
-                    {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { 
+                    {new Date(msg.CreatedAt).toLocaleTimeString("vi-VN", { 
                       hour: "2-digit", 
                       minute: "2-digit" 
                     })}

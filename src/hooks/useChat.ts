@@ -1,63 +1,56 @@
-import { useState, useEffect, useCallback } from "react";
+import { useEffect, useCallback, useState } from "react";
 import { socket } from "../lib/socket";
-import { getMessages } from "../api/message.api";
+import { messageApi } from "../api/message.api";
 import { useChatStore } from "../store/chat.store";
 import { useAuthStore } from "../store/auth.store";
 
 export const useChat = (conversationId: string) => {
-  const { messages, setMessages, prependMessages, addMessage } = useChatStore();
+  const { messages, setMessages, addMessage } = useChatStore();
   const { user } = useAuthStore();
   const [page, setPage] = useState(1);
-  const [hasMore, setHasMore] = useState(true);
+  const [hasMore, setHasMore] = useState(false);
   const [loadingMore, setLoadingMore] = useState(false);
 
-  const fetchMessages = useCallback(async (pageNum: number) => {
+  const fetchMessages = useCallback(async () => {
     if (!conversationId) return;
     try {
-      const res = await getMessages(conversationId, pageNum);
-      if (res.success) {
-        if (pageNum === 1) {
-          setMessages(res.messages);
-        } else {
-          prependMessages(res.messages);
-        }
-        setHasMore(res.currentPage < res.totalPages);
-      }
+      const res = await messageApi.getMessages(+conversationId);
+      setMessages(res.data);
+      setHasMore(false);
     } catch (err) {
       console.error("Fetch messages error:", err);
     }
-  }, [conversationId, setMessages, prependMessages]);
+  }, [conversationId, setMessages]);
 
   useEffect(() => {
-    if (!conversationId || !user) return;
+    if (!conversationId) return;
 
     setPage(1);
-    setHasMore(true);
-    fetchMessages(1);
+    setLoadingMore(false);
+    setHasMore(false);
+    fetchMessages();
 
     socket.connect();
     socket.emit("join_room", conversationId);
 
-    socket.on("receive_message", (newMessage) => {
-      if (newMessage.conversationId === conversationId) {
+    const handleReceiveMessage = (newMessage: any) => {
+      if (newMessage.ConversationId === +conversationId) {
         addMessage(newMessage);
       }
-    });
+    };
+
+    socket.on("receive_message", handleReceiveMessage);
 
     return () => {
-      socket.off("receive_message");
+      socket.off("receive_message", handleReceiveMessage);
     };
-  }, [conversationId, user, fetchMessages, addMessage]);
+  }, [conversationId, fetchMessages, addMessage]);
 
   const loadMore = async () => {
-    if (!hasMore || loadingMore) return;
-    setLoadingMore(true);
-    const nextPage = page + 1;
-    await fetchMessages(nextPage);
-    setPage(nextPage);
-    setLoadingMore(false);
+    // Backend currently returns the full conversation history in one request.
+    // Paging is not supported in the current API contract.
+    return;
   };
 
-  // QUAN TRỌNG: Phải return 'page' ở đây
   return { messages, loadMore, hasMore, loadingMore, user, page };
 };

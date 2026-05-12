@@ -1,22 +1,44 @@
-import { updateAvatarApi } from "../api/user.api";
 import { useAuthStore } from "../store/auth.store";
+import type { LoginPayload, RegisterPayload } from "../api/auth.api";
 
-export const useAuth = () => {
-  const { user, setUser } = useAuthStore();
+export function useAuth() {
+  const { setAuth, logout } = useAuthStore();
 
-  const changeAvatar = async (file: File) => {
-    try {
-      const res = await updateAvatarApi(file);
-      if (res.success) {
-        // Cập nhật lại user trong Store với URL avatar mới từ Backend
-        setUser(res.data.user);
-        alert("Cập nhật ảnh đại diện thành công!");
-      }
-    } catch (error) {
-      console.error("Lỗi upload avatar:", error);
-      alert("Không thể cập nhật ảnh.");
-    }
+  const loginHandler = async (data: LoginPayload) => {
+    // MOCK
+    setAuth({
+      UserId: 1,
+      FullName: "User Demo",
+      Email: data.email,
+      Avatar: "",
+      IsOnline: true,
+      LastActive: new Date().toISOString(),
+      Role: "user",
+      IsActive: true,
+      CreateAt: new Date().toISOString(),
+      UpdatedAt: new Date().toISOString(),
+    }, "mock-token");
   };
 
-  return { user, changeAvatar };
-};
+  const registerHandler = async (data: RegisterPayload) => {
+    // MOCK
+    setAuth({
+      UserId: 1,
+      FullName: data.fullName,
+      Email: data.email,
+      Avatar: "",
+      IsOnline: true,
+      LastActive: new Date().toISOString(),
+      Role: "user",
+      IsActive: true,
+      CreateAt: new Date().toISOString(),
+      UpdatedAt: new Date().toISOString(),
+    }, "mock-token");
+  };
+
+  return {
+    loginHandler,
+    registerHandler,
+    logout,
+  };
+}

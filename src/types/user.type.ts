@@ -1,6 +1,13 @@
 export interface User {
-  _id: string;
-  fullName: string;    // ✅ Đã đổi từ name -> fullName
-  email: string;
-  avatar: string | null; // ✅ Hỗ trợ null từ Backend
+  UserId: number;
+  FullName: string;
+  Email: string;
+  // Bỏ qua PasswordHash ở Frontend vì lý do bảo mật
+  Avatar: string;
+  IsOnline: boolean;
+  LastActive: string; // datetime (ISO string)
+  Role: string; // enum
+  IsActive: boolean;
+  CreateAt: string;
+  UpdatedAt: string;
 }

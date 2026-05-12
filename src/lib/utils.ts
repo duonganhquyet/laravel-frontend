@@ -43,8 +43,8 @@ export const getInitials = (fullName?: string | null): string => {
  * @returns true nếu cùng người gửi
  */
 export const isSameSender = (msg1: any, msg2: any): boolean => {
-  const senderId1 = typeof msg1.senderId === "object" ? msg1.senderId?._id : msg1.senderId;
-  const senderId2 = typeof msg2.senderId === "object" ? msg2.senderId?._id : msg2.senderId;
+  const senderId1 = msg1.SenderId;
+  const senderId2 = msg2.SenderId;
   return senderId1 && senderId2 && senderId1 === senderId2;
 };
 

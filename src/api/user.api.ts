@@ -1,13 +1,8 @@
-import { api } from "./axios";
+import { api } from '../lib/axios';
+import type { User } from '../types/user.type'; // Interface User đã định nghĩa ở bước trước
 
-export const updateAvatarApi = async (file: File) => {
-  const formData = new FormData();
-  formData.append("avatar", file); // Key phải là 'avatar' như Backend quy định
-
-  const response = await api.post("/user/update-avatar", formData, {
-    headers: {
-      "Content-Type": "multipart/form-data",
-    },
-  });
-  return response.data;
+export const userApi = {
+  // Lấy thông tin profile (Yêu cầu có Access Token trong Header)
+  getProfile: () => 
+    api.get<User>('/user/profile'), //[cite: 3]
 };

@@ -10,7 +10,7 @@ export const normalizeAvatarUrl = (url?: string | null): string | null => {
   if (url.startsWith("http")) return url;
   
   // Nếu là relative path
-  const baseUrl = "http://localhost:5000";
+  const baseUrl = "http://localhost:8000";
   const normalizedUrl = url.startsWith("/") ? url : `/${url}`;
   return `${baseUrl}${normalizedUrl}`;
 };

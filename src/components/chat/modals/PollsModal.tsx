@@ -24,7 +24,7 @@ export const PollsModal: React.FC<PollsModalProps> = ({ conversationId, onClose 
   const fetchPolls = async () => {
     setIsLoading(true);
     try {
-      const res = await pollApi.getPolls(Number(conversationId));
+      const res = await pollApi.getPolls(conversationId);
       setPolls((res.data as any).data || res.data || []);
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
@@ -50,7 +50,7 @@ export const PollsModal: React.FC<PollsModalProps> = ({ conversationId, onClose 
     setIsSubmitting(true);
     setError('');
     try {
-      await pollApi.createPoll(Number(conversationId), newQuestion, validOptions);
+      await pollApi.createPoll(conversationId, newQuestion, validOptions);
       setNewQuestion('');
       setNewOptions(['', '']);
       setIsCreating(false);
@@ -64,7 +64,7 @@ export const PollsModal: React.FC<PollsModalProps> = ({ conversationId, onClose 
     }
   };
 
-  const handleVote = async (pollId: number, optionId: number) => {
+  const handleVote = async (pollId: string, optionId: string) => {
     try {
       await pollApi.votePoll(pollId, optionId);
       fetchPolls(); // Reload để lấy số vote mới
@@ -186,7 +186,7 @@ export const PollsModal: React.FC<PollsModalProps> = ({ conversationId, onClose 
                       {poll.Options.map(opt => {
                         const votes = opt.VoterIds?.length || 0;
                         const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
-                        const hasVoted = opt.VoterIds?.includes(Number(user?._id)); // Giả định user._id map với VoterIds
+                        const hasVoted = opt.VoterIds?.includes(user?._id || ''); // Giả định user._id map với VoterIds
 
                         return (
                           <div 

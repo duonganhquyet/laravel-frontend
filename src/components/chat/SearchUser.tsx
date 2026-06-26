@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { AxiosError } from 'axios';
-import { userApi } from '../../api/user.api'; // Giả định import
+import { userApi } from '../../api/user.api';
 import type { User } from '../../types/user.type';
-import { Input } from '../common/Input';
 
 interface SearchUsersResponse {
   users: User[];
@@ -38,33 +37,39 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
   };
 
   return (
-    <div className="relative w-full">
-      <Input 
-        placeholder="Nhập email hoặc tên để tìm..." 
+    <div style={{ position: 'relative', width: '100%' }}>
+      <input
+        id="search-user-input"
+        type="text"
+        placeholder="Tìm kiếm người dùng..."
         value={query}
         onChange={handleSearch}
-        className="mb-0 text-gray-700 focus:ring-1 focus:ring-blue-500 "
+        className="sidebar-search-input"
+        autoComplete="off"
       />
-      {isLoading && <div className="absolute right-3 top-3 text-sm text-gray-400">Đang tìm...</div>}
-      
+      {isLoading && (
+        <span className="search-loading">Đang tìm...</span>
+      )}
+
       {users.length > 0 && (
-        <ul className="absolute z-20 w-full bg-white border rounded shadow-lg mt-1 max-h-48 overflow-y-auto">
+        <ul className="search-dropdown" style={{ listStyle: 'none', margin: 0, padding: 0 }}>
           {users.map(user => (
-            <li 
-              key={user._id} 
+            <li
+              key={user._id}
+              id={`search-result-${user._id}`}
               onClick={() => {
                 onSelectUser(user);
                 setQuery('');
                 setUsers([]);
               }}
-              className="p-3 hover:bg-gray-100 cursor-pointer flex items-center gap-2 border-b last:border-0"
+              className="search-dropdown-item"
             >
-              <div className="w-8 h-8 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xs font-bold">
+              <div className="search-item-avatar">
                 {user.fullName.charAt(0).toUpperCase()}
               </div>
-              <div className="flex flex-col">
-                <span className="text-sm font-semibold text-gray-800">{user.fullName}</span>
-                <span className="text-xs text-gray-500">{user.email}</span>
+              <div>
+                <div className="search-item-name">{user.fullName}</div>
+                <div className="search-item-email">{user.email}</div>
               </div>
             </li>
           ))}

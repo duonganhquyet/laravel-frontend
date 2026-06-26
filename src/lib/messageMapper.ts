@@ -24,6 +24,7 @@ export type BackendMessage = {
   isDeletedBySender?: boolean;
   isDeletedForAll?: boolean;
   deletedAt?: string;
+  readBy?: BackendSender[] | string[];
 };
 
 const getSenderId = (sender: BackendMessage['senderId'] | BackendMessage['sender']) => {
@@ -59,6 +60,14 @@ export const mapBackendMessage = (message: BackendMessage): Message => ({
   IsDeletedBySender: message.isDeletedBySender ?? false,
   IsDeletedForAll: message.isDeletedForAll ?? false,
   DeletedAt: message.deletedAt,
+  ReadBy: (message.readBy || []).map((r: any) => {
+    if (typeof r === 'string') return { _id: r, fullName: '', avatar: null };
+    return {
+      _id: r._id || '',
+      fullName: r.fullName || '',
+      avatar: r.avatar || null,
+    };
+  }),
 });
 
 export const mapBackendMessages = (messages: BackendMessage[] = []): Message[] =>

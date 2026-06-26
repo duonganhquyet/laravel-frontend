@@ -1,27 +1,27 @@
 // src/types/group.type.ts
 
 export interface PollOption {
-  OptionId: number;
-  PollId: number;
+  OptionId: string;
+  PollId: string;
   OptionText: string;
-  VoterIds: number[]; // Mảng chứa UserId của những người đã bình chọn
+  VoterIds: string[]; // Mảng chứa UserId của những người đã bình chọn
 }
 
 export interface Poll {
-  PollId: number;
-  ConversationId: number;
+  PollId: string;
+  ConversationId: string;
   Question: string;
-  CreatedByUserId: number; // ID người tạo
+  CreatedByUserId: string; // ID người tạo
   CreatedAt: string;
   IsActive: boolean;
   Options: PollOption[];
 }
 
 export interface GroupNote {
-  NoteId: number;
-  ConversationId: number;
+  NoteId: string;
+  ConversationId: string;
   Content: string;
-  CreatedByUserId: number;
+  CreatedByUserId: string;
   CreatedAt: string;
   UpdatedAt: string;
 }

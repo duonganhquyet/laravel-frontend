@@ -22,7 +22,7 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
     try {
       // conversationId is string, but noteApi might expect number if defined so in group.api.ts
       // Actually axios can serialize string or number in URL
-      const res = await noteApi.getNotes(Number(conversationId));
+      const res = await noteApi.getNotes(conversationId);
       // Phụ thuộc vào backend trả về { success, data } hay mảng trực tiếp
       setNotes((res.data as any).data || res.data || []);
     } catch (err: unknown) {
@@ -44,7 +44,7 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
 
     setIsSubmitting(true);
     try {
-      await noteApi.createNote(Number(conversationId), newNote);
+      await noteApi.createNote(conversationId, newNote);
       setNewNote('');
       fetchNotes(); // Reload notes
     } catch (err: unknown) {
@@ -56,7 +56,7 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
     }
   };
 
-  const handleDeleteNote = async (noteId: number) => {
+  const handleDeleteNote = async (noteId: string) => {
     if (!window.confirm('Bạn có chắc muốn xóa ghi chú này?')) return;
     try {
       await noteApi.deleteNote(noteId);

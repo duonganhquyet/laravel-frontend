@@ -1,0 +1,71 @@
+/* ChatMess.css – giữ lại để tương thích, các style chính đã chuyển sang App.css */
+
+/* Animation cho message bubble */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Legacy classes (nếu còn dùng) */
+.chat-window-shell {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.chat-window-scroll {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.message-wrapper {
+  display: flex;
+  max-width: 70%;
+  animation: fadeIn 0.3s ease;
+}
+
+.message-wrapper.is-mine {
+  align-self: flex-end;
+  flex-direction: row-reverse;
+}
+
+.message-wrapper.is-other {
+  align-self: flex-start;
+}
+
+.message-bubble {
+  padding: 11px 16px;
+  border-radius: 18px;
+  font-size: 14.5px;
+  line-height: 1.55;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.is-mine .message-bubble {
+  background: linear-gradient(135deg, #3b82f6 0%, #5b5fef 100%);
+  color: white;
+  border-bottom-right-radius: 5px;
+}
+
+.is-other .message-bubble {
+  background: var(--bg-panel, #111827);
+  color: var(--text-main, #e2e8f0);
+  border: 1px solid var(--border-color, rgba(255,255,255,0.07));
+  border-bottom-left-radius: 5px;
+}
+
+.chat-typing-indicator {
+  position: absolute;
+  left: 20px;
+  bottom: 82px;
+  z-index: 20;
+  font-size: 13px;
+  color: var(--text-sub, #94a3b8);
+  font-style: italic;
+  pointer-events: none;
+}

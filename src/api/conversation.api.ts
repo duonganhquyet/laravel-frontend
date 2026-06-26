@@ -16,6 +16,10 @@ export const conversationApi = {
   // Cập nhật tên nhóm, v.v.
   updateConversation: (id:string, data: Partial<Conversation>) => 
     api.put<Conversation>(`/conversations/${id}`, data),
+
+  // Đánh dấu đã đọc tất cả tin nhắn trong conversation
+  markAsRead: (conversationId: string) => 
+    api.put<{ success: boolean }>(`/conversations/${conversationId}/read`),
 };
 
 export const participantApi = {

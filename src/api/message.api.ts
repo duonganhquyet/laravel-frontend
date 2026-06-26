@@ -17,8 +17,8 @@ export const messageApi = {
   // Gửi tin nhắn (Hỗ trợ file đính kèm dựa trên MessageType)
   sendMessage: (conversationId: string, content: string, file?: File) => {
     const formData = new FormData();
-    formData.append('ConversationId', conversationId.toString());
-    formData.append('Content', content);
+    formData.append('conversationId', conversationId.toString());
+    formData.append('content', content);
     if (file) {
       formData.append('file', file); // Sẽ xử lý để lấy FileName, FileSize, MimeType tại backend
     }
@@ -34,6 +34,6 @@ export const messageApi = {
   // Tìm kiếm tin nhắn, ảnh, file
   searchMessages: (conversationId: string, query: string, type?: string) => 
     api.get<Message[]>(`/messages/search`, { 
-      params: { ConversationId: conversationId, keyword: query, MessageType: type } 
+      params: { conversationId: conversationId, keyword: query, MessageType: type } 
     }),
 };

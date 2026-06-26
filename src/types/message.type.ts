@@ -19,6 +19,11 @@ export interface Message {
   IsDeletedBySender: boolean;
   IsDeletedForAll: boolean;
   DeletedAt?: string;
+  ReadBy?: {
+    _id: string;
+    fullName: string;
+    avatar: string | null;
+  }[];
 }
 
 export interface MessageRead {

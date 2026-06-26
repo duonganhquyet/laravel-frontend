@@ -4,35 +4,35 @@ import type { Poll, GroupNote } from '../types/group.type';
 
 export const pollApi = {
   // Lấy danh sách bình chọn trong nhóm
-  getPolls: (conversationId: number) => 
+  getPolls: (conversationId: string) => 
     api.get<Poll[]>(`/conversations/${conversationId}/polls`),
 
   // Tạo bình chọn mới
-  createPoll: (conversationId: number, question: string, options: string[]) => 
+  createPoll: (conversationId: string, question: string, options: string[]) => 
     api.post<Poll>(`/conversations/${conversationId}/polls`, { 
       Question: question, 
       Options: options 
     }),
 
   // Bấm bình chọn (truyền vào OptionId được chọn)
-  votePoll: (pollId: number, optionId: number) => 
+  votePoll: (pollId: string, optionId: string) => 
     api.post(`/polls/${pollId}/vote`, { OptionId: optionId }),
 };
 
 export const noteApi = {
   // Lấy danh sách ghi chú
-  getNotes: (conversationId: number) => 
+  getNotes: (conversationId: string) => 
     api.get<GroupNote[]>(`/conversations/${conversationId}/notes`),
 
   // Tạo ghi chú mới
-  createNote: (conversationId: number, content: string) => 
+  createNote: (conversationId: string, content: string) => 
     api.post<GroupNote>(`/conversations/${conversationId}/notes`, { Content: content }),
 
   // Cập nhật ghi chú
-  updateNote: (noteId: number, content: string) => 
+  updateNote: (noteId: string, content: string) => 
     api.put<GroupNote>(`/notes/${noteId}`, { Content: content }),
 
   // Xóa ghi chú (có thể cần check quyền trên backend)
-  deleteNote: (noteId: number) => 
+  deleteNote: (noteId: string) => 
     api.delete(`/notes/${noteId}`),
 };

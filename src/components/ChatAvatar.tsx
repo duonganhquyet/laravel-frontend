@@ -17,28 +17,31 @@ export const ChatAvatar = ({ avatarUrl, fullName, size = 40 }: Props) => {
    * 2. Logic tạo màu nền cố định theo tên giống Telegram.
    * Cùng một cái tên sẽ luôn ra một màu nhất định.
    */
-  const getTelegramColor = (name: string) => {
-    const colors = [
-      "#2196f3", // Blue
-      "#32c45e", // Green
-      "#ff4444", // Red
-      "#ffbb33", // Orange
-      "#aa66cc", // Purple
-      "#0099cc", // Cyan
-      "#ff6b6b", // Red 2
-      "#4ecdc4", // Teal
+  const getTelegramColor = (name: string): string => {
+    // Sử dụng gradient thay vì màu đơn – phù hợp dark theme
+    const gradients = [
+      "linear-gradient(135deg, #3b82f6, #6366f1)",   // Blue → Indigo
+      "linear-gradient(135deg, #10b981, #06b6d4)",   // Emerald → Cyan
+      "linear-gradient(135deg, #f59e0b, #ef4444)",   // Amber → Red
+      "linear-gradient(135deg, #8b5cf6, #ec4899)",   // Violet → Pink
+      "linear-gradient(135deg, #06b6d4, #3b82f6)",   // Cyan → Blue
+      "linear-gradient(135deg, #f43f5e, #fb923c)",   // Rose → Orange
+      "linear-gradient(135deg, #14b8a6, #22d3ee)",   // Teal → Cyan
+      "linear-gradient(135deg, #a855f7, #6366f1)",   // Purple → Indigo
     ];
-    // Thuật toán băm đơn giản để chọn màu dựa trên mã ký tự của tên
     let hash = 0;
     for (let i = 0; i < name.length; i++) {
       hash = name.charCodeAt(i) + ((hash << 5) - hash);
     }
-    const index = Math.abs(hash) % colors.length;
-    return colors[index];
+    const index = Math.abs(hash) % gradients.length;
+    return gradients[index];
   };
 
-  const bgColor = getTelegramColor(fullName || "");
+  const bgGradient = getTelegramColor(fullName || "");
   const normalizedUrl = normalizeAvatarUrl(avatarUrl);
+
+  const borderRadius = size >= 40 ? '13px' : '10px';
+  const fontSize = size * 0.42;
 
   // 3. Nếu không có ảnh hoặc ảnh bị lỗi đường dẫn -> Hiện initials
   if (!normalizedUrl || isError) {
@@ -47,10 +50,13 @@ export const ChatAvatar = ({ avatarUrl, fullName, size = 40 }: Props) => {
         style={{ 
           width: size, 
           height: size, 
-          backgroundColor: bgColor,
-          fontSize: size * 0.5 // Fix: scale chữ đúng (50% không phải 40%)
+          background: bgGradient,
+          fontSize,
+          borderRadius,
+          boxShadow: `0 3px 10px rgba(0,0,0,0.3)`,
+          flexShrink: 0,
         }}
-        className="flex items-center justify-center rounded-full text-white font-bold shadow-sm shrink-0"
+        className="flex items-center justify-center text-white font-bold"
       >
         {initials}
       </div>
@@ -62,8 +68,14 @@ export const ChatAvatar = ({ avatarUrl, fullName, size = 40 }: Props) => {
     <img
       src={normalizedUrl}
       alt={fullName}
-      style={{ width: size, height: size }}
-      className="rounded-full object-cover shadow-sm shrink-0"
+      style={{
+        width: size,
+        height: size,
+        borderRadius,
+        objectFit: 'cover',
+        flexShrink: 0,
+        boxShadow: '0 3px 10px rgba(0,0,0,0.3)',
+      }}
       onError={() => {
         // Khi link ảnh bị lỗi (404, chết link), state này sẽ kích hoạt render lại về dạng chữ
         setIsError(true);

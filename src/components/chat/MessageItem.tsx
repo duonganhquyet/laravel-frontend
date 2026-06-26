@@ -1,16 +1,35 @@
 import React from 'react';
 import type { Message } from '../../types/message.type';
+import { PollMessageItem } from './PollMessageItem';
 
 interface MessageItemProps {
   message: Message;
   isMine: boolean;
+  conversationId?: string;
+  readByUsers?: { _id: string; fullName: string; avatar: string | null }[];
 }
 
-export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine }) => {
+import { ChatAvatar } from '../ChatAvatar';
+
+export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conversationId, readByUsers = [] }) => {
+  if (message.MessageType === 'system') {
+    return (
+      <div className="w-full flex justify-center my-3 animate-fade-in-up">
+        <span className="bg-emerald-50 text-emerald-700 px-4 py-1.5 rounded-full text-[12px] font-medium border border-emerald-100 shadow-sm">
+          {message.Content}
+        </span>
+      </div>
+    );
+  }
+
+  if (message.MessageType === 'poll') {
+    return <PollMessageItem pollId={message.Content} conversationId={conversationId || ''} />;
+  }
+
   return (
-    <div className={`flex w-full mb-6 group ${isMine ? 'justify-end' : 'justify-start'}`}>
+    <div className={`flex w-full mb-6 group animate-fade-in-up ${isMine ? 'justify-end' : 'justify-start'}`}>
       {!isMine && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex shrink-0 items-center justify-center text-white text-xs font-bold mr-3 mt-auto shadow-sm overflow-hidden">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex shrink-0 items-center justify-center text-white text-sm font-bold mr-3 mt-auto shadow-md shadow-indigo-500/20 overflow-hidden ring-2 ring-white">
           {message.Sender?.avatar ? (
             <img src={message.Sender.avatar} alt={message.Sender.fullName} className="w-full h-full object-cover" />
           ) : (
@@ -19,24 +38,24 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine }) => 
         </div>
       )}
       
-      <div className={`relative max-w-[70%] sm:max-w-[60%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
-        <span className={`text-[11px] text-slate-500 mb-1 px-1 font-medium ${isMine ? 'text-right' : 'text-left'}`}>
+      <div className={`relative max-w-[75%] sm:max-w-[65%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
+        <span className={`text-[11px] text-slate-500 mb-1.5 px-1 font-semibold ${isMine ? 'text-right' : 'text-left'}`}>
           {message.Sender?.fullName || 'Người dùng'}
         </span>
-        <div className={`p-3.5 shadow-sm relative ${
+        <div className={`p-4 shadow-sm relative ${
           isMine 
-            ? 'bg-gradient-to-br from-blue-500 to-indigo-600 text-white rounded-2xl rounded-br-sm shadow-blue-500/20' 
-            : 'bg-white border border-slate-100 text-slate-800 rounded-2xl rounded-bl-sm shadow-slate-200/50'
+            ? 'bg-gradient-to-br from-indigo-600 to-violet-600 text-white rounded-3xl rounded-br-sm shadow-indigo-500/30 shadow-lg border border-indigo-500/50' 
+            : 'bg-white/80 backdrop-blur-md border border-white/60 text-slate-800 rounded-3xl rounded-bl-sm shadow-lg shadow-slate-200/50'
         }`}>
           
           {message.MessageType === 'image' && message.FileUrl && (
-            <div className="mb-2 overflow-hidden rounded-xl border border-black/5">
+            <div className="mb-2 overflow-hidden rounded-2xl border border-black/5 shadow-sm">
               <img src={message.FileUrl} alt="Đính kèm" className="max-w-full h-auto object-cover max-h-[300px]" loading="lazy" />
             </div>
           )}
           
           {message.MessageType === 'video' && message.FileUrl && (
-            <div className="mb-2 overflow-hidden rounded-xl border border-black/5 bg-black/10">
+            <div className="mb-2 overflow-hidden rounded-2xl border border-black/5 bg-black/10 shadow-sm">
               <video src={message.FileUrl} controls className="max-w-full h-auto max-h-[300px]" />
             </div>
           )}
@@ -46,32 +65,62 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine }) => 
               href={message.FileUrl} 
               target="_blank" 
               rel="noreferrer" 
-              className={`flex items-center gap-2 p-2.5 mb-2 rounded-xl transition-colors ${
-                isMine ? 'bg-white/20 hover:bg-white/30 text-white' : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
+              className={`flex items-center gap-3 p-3 mb-2 rounded-2xl transition-colors ${
+                isMine ? 'bg-white/20 hover:bg-white/30 text-white border border-white/10' : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200/60'
               }`}
             >
-              <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+              <div className={`p-2 rounded-xl flex items-center justify-center ${isMine ? 'bg-white/20' : 'bg-indigo-100 text-indigo-600'}`}>
+                <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+              </div>
               <div className="flex flex-col overflow-hidden">
-                <span className="truncate text-sm font-medium">{message.FileName || 'Tải file đính kèm'}</span>
-                {message.FileSize && <span className="text-[10px] opacity-70">{(message.FileSize / 1024 / 1024).toFixed(2)} MB</span>}
+                <span className="truncate text-[15px] font-semibold">{message.FileName || 'Tải file đính kèm'}</span>
+                {message.FileSize && <span className="text-[11px] opacity-80 mt-0.5">{(message.FileSize / 1024 / 1024).toFixed(2)} MB</span>}
               </div>
             </a>
           )}
           
           {/* Nội dung text */}
-          {message.Content && <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed">{message.Content}</p>}
+          {message.Content && <p className="whitespace-pre-wrap break-words text-[15px] leading-relaxed tracking-wide">{message.Content}</p>}
         </div>
         
-        {/* Thời gian */}
-        <span className={`text-[11px] font-medium mt-1.5 px-1 ${
-          isMine ? 'text-slate-400' : 'text-slate-400'
-        }`}>
-          {new Date(message.CreatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-        </span>
+        {/* Thời gian và Trạng thái */}
+        <div className={`flex items-center gap-2 mt-2 px-1 ${isMine ? 'justify-end' : 'justify-start'}`}>
+          <span className={`text-[10px] font-bold ${
+            isMine ? 'text-indigo-400/80' : 'text-slate-400'
+          }`}>
+            {new Date(message.CreatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+          </span>
+          
+          {/* Read Receipts for My Messages */}
+          {isMine && (
+            <div className="flex items-center">
+              {readByUsers.length > 0 ? (
+                <div className="flex -space-x-1.5 opacity-90 transition-all hover:opacity-100 cursor-pointer">
+                  {readByUsers.slice(0, 3).map(user => (
+                    <div key={user._id} className="relative z-10 ring-1 ring-white rounded-full bg-white shadow-sm" title={`Đã xem bởi ${user.fullName}`}>
+                      <ChatAvatar avatarUrl={user.avatar} fullName={user.fullName} size={14} />
+                    </div>
+                  ))}
+                  {readByUsers.length > 3 && (
+                    <div className="relative z-0 w-[14px] h-[14px] rounded-full bg-slate-200 ring-1 ring-white flex items-center justify-center text-[7px] font-bold text-slate-600 shadow-sm">
+                      +{readByUsers.length - 3}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-indigo-300" title="Đã gửi">
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       </div>
 
       {isMine && (
-        <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-400 to-indigo-500 flex shrink-0 items-center justify-center text-white text-xs font-bold ml-3 mt-auto shadow-sm overflow-hidden">
+        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex shrink-0 items-center justify-center text-white text-sm font-bold ml-3 mt-auto shadow-md shadow-indigo-500/20 overflow-hidden ring-2 ring-white">
           {message.Sender?.avatar ? (
             <img src={message.Sender.avatar} alt={message.Sender.fullName} className="w-full h-full object-cover" />
           ) : (

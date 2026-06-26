@@ -1,9 +1,31 @@
-import { io } from "socket.io-client";
+import Echo from 'laravel-echo';
+import Pusher from 'pusher-js';
 
-export const socket = io("http://localhost:5000", {
-  autoConnect: false
-});
+window.Pusher = Pusher;
 
-export const setSocketAuthToken = (token: string | null) => {
-  socket.auth = token ? { token } : {};
+let echoInstance: Echo | null = null;
+
+export const initEcho = (token: string | null) => {
+  if (echoInstance) {
+    echoInstance.disconnect();
+  }
+
+  echoInstance = new Echo({
+    broadcaster: 'reverb',
+    key: 'chatweb_reverb_key',
+    wsHost: 'localhost',
+    wsPort: 8080,
+    forceTLS: false,
+    disableStats: true,
+    authEndpoint: 'http://localhost:8000/api/broadcasting/auth',
+    auth: {
+      headers: {
+        Authorization: `Bearer ${token}`
+      }
+    }
+  });
+
+  return echoInstance;
 };
+
+export const getEcho = () => echoInstance;

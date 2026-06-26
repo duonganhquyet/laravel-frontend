@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import type { Socket } from 'socket.io-client';
-import { socket as chatSocket, setSocketAuthToken } from '../lib/socket';
+import { initEcho, getEcho } from '../lib/socket';
 import { useAuthStore } from '../store/auth.store';
 import type { Message } from '../types/message.type';
 import type { BackendMessage } from '../lib/messageMapper';
+import Echo from 'laravel-echo';
 
 export interface ParticipantUpdateData {
   ConversationId: string;
@@ -13,123 +13,134 @@ export interface ParticipantUpdateData {
 }
 
 export interface UseSocketReturn {
-  socket: Socket | null;
+  echo: Echo | null;
   sendRealtimeMessage: (message: Message) => void;
   onMessageReceived: (callback: (msg: BackendMessage) => void) => () => void;
-  onTyping: (callback: (payload: { roomId: string; fromSocketId: string }) => void) => () => void;
-  onStopTyping: (callback: (payload: { roomId: string; fromSocketId: string }) => void) => () => void;
+  onTyping: (callback: (payload: { roomId: string; fromSocketId: string; userId?: string }) => void) => () => void;
+  onStopTyping: (callback: (payload: { roomId: string; fromSocketId: string; userId?: string }) => void) => () => void;
+  onMessagesRead: (callback: (payload: { conversationId: string; userId: string }) => void) => () => void;
   onParticipantsUpdated: (callback: (data: ParticipantUpdateData) => void) => () => void;
+  onEvent: (eventName: string, callback: (...args: any[]) => void) => () => void;
 }
 
 export const useSocket = (activeConversationId?: string): UseSocketReturn => {
-  const [socket, setSocket] = useState<Socket | null>(null);
+  const [echo, setEcho] = useState<Echo | null>(null);
   const { user } = useAuthStore();
-  const socketRef = useRef<Socket | null>(null);
-  const previousRoomIdRef = useRef<string | undefined>(undefined);
+  const echoRef = useRef<Echo | null>(null);
 
   useEffect(() => {
     if (!user) return;
 
-    setSocketAuthToken(localStorage.getItem('token'));
-    socketRef.current = chatSocket;
-
-    const handleConnect = () => {
-      setSocket(chatSocket);
-    };
-
-    chatSocket.on('connect', handleConnect);
-
-    if (!chatSocket.connected) {
-      chatSocket.connect();
-    } else {
-      setSocket(chatSocket);
-    }
+    const token = localStorage.getItem('token');
+    const instance = initEcho(token);
+    echoRef.current = instance;
+    setEcho(instance);
 
     return () => {
-      chatSocket.off('connect', handleConnect);
-      if (previousRoomIdRef.current) {
-        chatSocket.emit('leave_room', { roomId: previousRoomIdRef.current });
+      if (instance) {
+        instance.disconnect();
       }
-      socketRef.current = null;
-      setSocket(null);
+      echoRef.current = null;
+      setEcho(null);
     };
   }, [user]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!echo || !activeConversationId) return;
 
-    const previousRoomId = previousRoomIdRef.current;
-    if (previousRoomId && previousRoomId !== activeConversationId) {
-      socket.emit('leave_room', { roomId: previousRoomId });
-    }
-
-    if (activeConversationId) {
-      socket.emit('join_room', { roomId: activeConversationId });
-    }
-
-    previousRoomIdRef.current = activeConversationId;
+    // Join the channel
+    const channel = echo.private(`chat.${activeConversationId}`);
 
     return () => {
-      if (activeConversationId) {
-        socket.emit('leave_room', { roomId: activeConversationId });
-      }
+      echo.leave(`chat.${activeConversationId}`);
     };
-  }, [socket, activeConversationId]);
+  }, [echo, activeConversationId]);
 
   const sendRealtimeMessage = useCallback((message: Message) => {
-    socketRef.current?.emit('send_message', {
-      conversationId: message.ConversationId,
-      content: message.Content,
-      type: message.MessageType,
-    });
+    // In Laravel Reverb, sending is usually done via HTTP and broadcasted back.
+    // If you need client-to-client events, use whisper.
+    // We assume backend handles the broadcast when a message is sent via API.
   }, []);
 
   const onMessageReceived = useCallback((callback: (msg: BackendMessage) => void) => {
-    const currentSocket = socketRef.current;
-    if (!currentSocket) return () => {};
+    if (!echo || !activeConversationId) return () => {};
 
-    currentSocket.on('receive_message', callback);
-    return () => currentSocket.off('receive_message', callback);
-  }, []);
+    const channel = echo.private(`chat.${activeConversationId}`);
+    channel.listen('.message.sent', (payload: any) => {
+      callback(payload.message);
+    });
 
-  const onTyping = useCallback((callback: (payload: { roomId: string; fromSocketId: string }) => void) => {
-    const currentSocket = socketRef.current;
-    if (!currentSocket) return () => {};
+    return () => {
+      channel.stopListening('.message.sent');
+    };
+  }, [echo, activeConversationId]);
 
-    currentSocket.on('typing', callback);
-    return () => currentSocket.off('typing', callback);
-  }, []);
+  const onTyping = useCallback((callback: (payload: { roomId: string; fromSocketId: string; userId?: string }) => void) => {
+    if (!echo || !activeConversationId) return () => {};
 
-  const onStopTyping = useCallback((callback: (payload: { roomId: string; fromSocketId: string }) => void) => {
-    const currentSocket = socketRef.current;
-    if (!currentSocket) return () => {};
+    const channel = echo.private(`chat.${activeConversationId}`);
+    channel.listenForWhisper('typing', (e: any) => {
+      callback({ roomId: activeConversationId, fromSocketId: '', userId: e.userId });
+    });
 
-    currentSocket.on('stop_typing', callback);
-    return () => currentSocket.off('stop_typing', callback);
-  }, []);
+    return () => {
+      // whisper listener cleanup handled by leave channel
+    };
+  }, [echo, activeConversationId]);
+
+  const onStopTyping = useCallback((callback: (payload: { roomId: string; fromSocketId: string; userId?: string }) => void) => {
+    if (!echo || !activeConversationId) return () => {};
+
+    const channel = echo.private(`chat.${activeConversationId}`);
+    channel.listenForWhisper('stop_typing', (e: any) => {
+      callback({ roomId: activeConversationId, fromSocketId: '', userId: e.userId });
+    });
+
+    return () => {};
+  }, [echo, activeConversationId]);
+
+  const onMessagesRead = useCallback((callback: (payload: { conversationId: string; userId: string }) => void) => {
+    if (!echo || !activeConversationId) return () => {};
+
+    const channel = echo.private(`chat.${activeConversationId}`);
+    channel.listen('.messages.read', (payload: any) => {
+      callback(payload);
+    });
+
+    return () => channel.stopListening('.messages.read');
+  }, [echo, activeConversationId]);
 
   const onParticipantsUpdated = useCallback((callback: (data: ParticipantUpdateData) => void) => {
-    const currentSocket = socketRef.current;
-    if (!currentSocket) return () => {};
+    if (!echo || !activeConversationId) return () => {};
 
-    currentSocket.on('participants_updated', callback);
-    return () => currentSocket.off('participants_updated', callback);
-  }, []);
+    const channel = echo.private(`chat.${activeConversationId}`);
+    channel.listen('.participants.updated', (payload: any) => {
+      callback(payload);
+    });
+
+    return () => channel.stopListening('.participants.updated');
+  }, [echo, activeConversationId]);
 
   const onEvent = useCallback((eventName: string, callback: (...args: any[]) => void) => {
-    const currentSocket = socketRef.current;
-    if (!currentSocket) return () => {};
+    if (!echo || !user) return () => {};
+    
+    const channel = echo.private(`user.${user.id}`);
+    channel.listen(`.${eventName}`, (payload: any) => {
+      callback(payload);
+    });
 
-    currentSocket.on(eventName, callback);
-    return () => currentSocket.off(eventName, callback);
-  }, []);
+    return () => {
+      channel.stopListening(`.${eventName}`);
+    };
+  }, [echo, user]);
 
   return {
-    socket,
+    echo,
     sendRealtimeMessage,
     onMessageReceived,
     onTyping,
     onStopTyping,
+    onMessagesRead,
     onParticipantsUpdated,
     onEvent,
   };

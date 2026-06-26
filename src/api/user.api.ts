@@ -8,6 +8,13 @@ export const userApi = {
 
   // Tìm kiếm người dùng theo tên hoặc email (Yêu cầu có Access Token)
   searchUsers: (query: string) => 
-    api.get<User[]>(`/user/search?query=${encodeURIComponent(query)}`), //[cite: 4]
+    api.get<User[]>(`/user/search?query=${encodeURIComponent(query)}`),
 
+  // Cập nhật ảnh đại diện
+  uploadAvatar: (formData: FormData) =>
+    api.post('/users/upload-avatar', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    }),
 };

@@ -13,7 +13,7 @@ export interface BackendConversation {
 
 export const mapBackendConversation = (be: BackendConversation): Conversation => {
   return {
-    ConversationId: be.conversationId || (be as any).ConversationId,
+    ConversationId: be.conversationId || (be as any)._id || (be as any).id || (be as any).ConversationId,
     ChatName: be.chatName || (be as any).ChatName || 'Không xác định',
     IsGroupChat: be.isGroupChat ?? (be as any).IsGroupChat ?? false,
     GroupAdminId: be.groupAdmins?.[0] || (be as any).GroupAdminId,

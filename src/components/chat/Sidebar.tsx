@@ -83,7 +83,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
   useEffect(() => {
     fetchConversations();
     fetchFriendRequests();
-  }, []);
+  }, [activeConversationId]);
 
   useEffect(() => {
     if (!echo) return;
@@ -283,7 +283,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
 
           const listToRender = isStrangerFolderOpen ? strangerConversations : normalConversations;
 
-          if (listToRender.length === 0 && !error) {
+          if (normalConversations.length === 0 && strangerConversations.length === 0 && !error) {
             return (
               <div className="p-8 flex flex-col items-center justify-center text-center h-full">
                 <div className="w-16 h-16 bg-white/60 rounded-2xl flex items-center justify-center mb-4 border border-white">
@@ -371,6 +371,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
           onClose={() => {
             setIsFriendRequestsOpen(false);
             fetchFriendRequests();
+            fetchConversations();
           }} 
         />
       )}

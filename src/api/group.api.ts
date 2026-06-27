@@ -10,13 +10,13 @@ export const pollApi = {
   // Tạo bình chọn mới
   createPoll: (conversationId: string, question: string, options: string[]) => 
     api.post<Poll>(`/conversations/${conversationId}/polls`, { 
-      Question: question, 
-      Options: options 
+      question, 
+      options 
     }),
 
   // Bấm bình chọn (truyền vào OptionId được chọn)
   votePoll: (pollId: string, optionId: string) => 
-    api.post(`/polls/${pollId}/vote`, { OptionId: optionId }),
+    api.post(`/polls/${pollId}/vote`, { optionId }),
 };
 
 export const noteApi = {
@@ -26,11 +26,11 @@ export const noteApi = {
 
   // Tạo ghi chú mới
   createNote: (conversationId: string, content: string) => 
-    api.post<GroupNote>(`/conversations/${conversationId}/notes`, { Content: content }),
+    api.post<GroupNote>(`/conversations/${conversationId}/notes`, { content }),
 
   // Cập nhật ghi chú
   updateNote: (noteId: string, content: string) => 
-    api.put<GroupNote>(`/notes/${noteId}`, { Content: content }),
+    api.put<GroupNote>(`/notes/${noteId}`, { content }),
 
   // Xóa ghi chú (có thể cần check quyền trên backend)
   deleteNote: (noteId: string) => 

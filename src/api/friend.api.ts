@@ -27,11 +27,11 @@ export const friendApi = {
 
   checkFriendStatus: async (targetUserId: string): Promise<FriendStatus> => {
     const res = await api.get(`/friend/status/${targetUserId}`);
-    return res.data?.data?.status || 'none';
+    return res.data?.status || res.data?.data?.status || 'none';
   },
 
   sendFriendRequest: async (targetUserId: string): Promise<void> => {
-    await api.post('/friend/add', { recipient: targetUserId });
+    await api.post('/friend/add', { recipientId: targetUserId });
   },
 
   acceptRequest: async (requestId: string): Promise<void> => {
@@ -47,6 +47,6 @@ export const friendApi = {
   },
 
   cancelRequest: async (targetUserId: string): Promise<void> => {
-    await api.post('/friend/cancel', { recipient: targetUserId });
+    await api.post('/friend/cancel', { recipientId: targetUserId });
   }
 };

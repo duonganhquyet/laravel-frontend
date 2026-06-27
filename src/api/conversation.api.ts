@@ -7,11 +7,11 @@ export const conversationApi = {
   
   // Tạo chat 1-1
   createDirectChat: (targetUserId:string) => 
-    api.post<Conversation>('/conversations', { targetUserId }),
+    api.post<Conversation>('/conversations', { userId: targetUserId }),
     
   // Tạo chat nhóm
   createGroupChat: (chatName: string, userIds:string[]) => 
-    api.post<Conversation>('/conversations/group', { chatName: chatName, users: userIds }),
+    api.post<Conversation>('/conversations/group', { name: chatName, users: userIds }),
 
   // Cập nhật tên nhóm, v.v.
   updateConversation: (id:string, data: Partial<Conversation>) => 
@@ -34,4 +34,24 @@ export const participantApi = {
   // Xóa thành viên (Admin xóa)
   removeMember: (conversationId:string, userId:string, removeByUserId:string) => 
     api.delete(`/conversations/${conversationId}/participants/${userId}`, { data: { removeBy: removeByUserId } }),
+};
+
+export const noteApi = {
+  getNotes: (conversationId: string) => 
+    api.get(`/conversations/${conversationId}/notes`),
+  createNote: (conversationId: string, content: string) => 
+    api.post(`/conversations/${conversationId}/notes`, { content }),
+  updateNote: (noteId: string, content: string) => 
+    api.put(`/notes/${noteId}`, { content }),
+  deleteNote: (noteId: string) => 
+    api.delete(`/notes/${noteId}`),
+};
+
+export const pollApi = {
+  getPolls: (conversationId: string) => 
+    api.get(`/conversations/${conversationId}/polls`),
+  createPoll: (conversationId: string, question: string, options: string[]) => 
+    api.post(`/conversations/${conversationId}/polls`, { question, options }),
+  votePoll: (pollId: string, optionId: string) => 
+    api.post(`/polls/${pollId}/vote`, { optionId }),
 };

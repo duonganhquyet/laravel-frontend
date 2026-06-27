@@ -6,7 +6,7 @@ import { useSocket } from '../../hooks/useSocket';
 import { useAuthStore } from '../../store/auth.store';
 import MessageInput from './MessageInput';
 import { mapBackendMessage, mapBackendMessages, type BackendMessage } from '../../lib/messageMapper';
-import { conversationApi, participantApi } from '../../api/conversation.api';
+import { conversationApi, participantApi, noteApi } from '../../api/conversation.api';
 import type { GroupNote } from '../../types/group.type';
 import type { ConversationParticipant } from '../../types/conversation.type';
 import { MessageItem } from './MessageItem';
@@ -25,7 +25,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId }) => {
   const [latestNote, setLatestNote] = useState<GroupNote | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  const { onMessageReceived, onTyping, onStopTyping, onMessagesRead } = useSocket(conversationId);
+  const { onMessageReceived, onTyping, onStopTyping, onMessagesRead, onMessageUpdated, onMessageDeleted } = useSocket(conversationId);
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -131,11 +131,35 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId }) => {
       }
     });
 
+    const cleanupUpdated = onMessageUpdated((updatedMessage: BackendMessage) => {
+      const mappedMessage = mapBackendMessage(updatedMessage);
+      if (mappedMessage.ConversationId === conversationId) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.MessageId === mappedMessage.MessageId ? mappedMessage : msg
+          )
+        );
+      }
+    });
+
+    const cleanupDeleted = onMessageDeleted((deletedMessage: BackendMessage) => {
+      const mappedMessage = mapBackendMessage(deletedMessage);
+      if (mappedMessage.ConversationId === conversationId) {
+        setMessages((prev) =>
+          prev.map((msg) =>
+            msg.MessageId === mappedMessage.MessageId ? mappedMessage : msg
+          )
+        );
+      }
+    });
+
     return () => {
       cleanup();
       cleanupRead();
+      cleanupUpdated();
+      cleanupDeleted();
     };
-  }, [conversationId, onMessageReceived, onMessagesRead, participants]);
+  }, [conversationId, onMessageReceived, onMessagesRead, onMessageUpdated, onMessageDeleted, participants]);
 
   useEffect(() => {
     const cleanupTyping = onTyping((payload) => {

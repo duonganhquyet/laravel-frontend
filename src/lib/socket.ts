@@ -12,12 +12,12 @@ export const initEcho = (token: string | null) => {
 
   echoInstance = new Echo({
     broadcaster: 'reverb',
-    key: 'chatweb_reverb_key',
-    wsHost: 'localhost',
-    wsPort: 8080,
+    key: import.meta.env.VITE_REVERB_APP_KEY || 'chatweb_reverb_key',
+    wsHost: import.meta.env.VITE_REVERB_HOST || '127.0.0.1',
+    wsPort: Number(import.meta.env.VITE_REVERB_PORT) || 6001,
     forceTLS: false,
     disableStats: true,
-    authEndpoint: 'http://localhost:8000/api/broadcasting/auth',
+    authEndpoint: `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api'}/broadcasting/auth`,
     auth: {
       headers: {
         Authorization: `Bearer ${token}`

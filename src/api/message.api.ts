@@ -36,4 +36,10 @@ export const messageApi = {
     api.get<Message[]>(`/messages/search`, { 
       params: { conversationId: conversationId, keyword: query, MessageType: type } 
     }),
+
+  editMessage: (messageId: string, content: string) =>
+    api.put<{ data: BackendMessage }>(`/messages/${messageId}`, { content }),
+
+  recallMessage: (messageId: string) =>
+    api.delete<{ data: BackendMessage }>(`/messages/${messageId}`),
 };

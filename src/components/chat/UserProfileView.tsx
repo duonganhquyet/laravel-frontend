@@ -18,9 +18,15 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ user, onStartC
 
   const fetchStatus = async () => {
     setIsLoading(true);
-    const status = await friendApi.checkFriendStatus(user._id);
-    setFriendStatus(status);
-    setIsLoading(false);
+    try {
+      const status = await friendApi.checkFriendStatus(user._id);
+      setFriendStatus(status);
+    } catch (e) {
+      console.error(e);
+      setFriendStatus('none');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   useEffect(() => {

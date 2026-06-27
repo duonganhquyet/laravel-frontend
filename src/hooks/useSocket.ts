@@ -16,6 +16,8 @@ export interface UseSocketReturn {
   echo: Echo | null;
   sendRealtimeMessage: (message: Message) => void;
   onMessageReceived: (callback: (msg: BackendMessage) => void) => () => void;
+  onMessageUpdated: (callback: (msg: BackendMessage) => void) => () => void;
+  onMessageDeleted: (callback: (msg: BackendMessage) => void) => () => void;
   onTyping: (callback: (payload: { roomId: string; fromSocketId: string; userId?: string }) => void) => () => void;
   onStopTyping: (callback: (payload: { roomId: string; fromSocketId: string; userId?: string }) => void) => () => void;
   onMessagesRead: (callback: (payload: { conversationId: string; userId: string }) => void) => () => void;
@@ -72,6 +74,32 @@ export const useSocket = (activeConversationId?: string): UseSocketReturn => {
 
     return () => {
       channel.stopListening('.message.sent');
+    };
+  }, [echo, activeConversationId]);
+
+  const onMessageUpdated = useCallback((callback: (msg: BackendMessage) => void) => {
+    if (!echo || !activeConversationId) return () => {};
+
+    const channel = echo.private(`chat.${activeConversationId}`);
+    channel.listen('.message.updated', (payload: any) => {
+      callback(payload.message);
+    });
+
+    return () => {
+      channel.stopListening('.message.updated');
+    };
+  }, [echo, activeConversationId]);
+
+  const onMessageDeleted = useCallback((callback: (msg: BackendMessage) => void) => {
+    if (!echo || !activeConversationId) return () => {};
+
+    const channel = echo.private(`chat.${activeConversationId}`);
+    channel.listen('.message.deleted', (payload: any) => {
+      callback(payload.message);
+    });
+
+    return () => {
+      channel.stopListening('.message.deleted');
     };
   }, [echo, activeConversationId]);
 
@@ -138,6 +166,8 @@ export const useSocket = (activeConversationId?: string): UseSocketReturn => {
     echo,
     sendRealtimeMessage,
     onMessageReceived,
+    onMessageUpdated,
+    onMessageDeleted,
     onTyping,
     onStopTyping,
     onMessagesRead,

@@ -11,9 +11,10 @@ interface MessageItemProps {
   isMine: boolean;
   conversationId?: string;
   readByUsers?: { _id: string; fullName: string; avatar: string | null }[];
+  onAvatarClick?: (userId: string) => void;
 }
 
-export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conversationId, readByUsers = [] }) => {
+export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conversationId, readByUsers = [], onAvatarClick }) => {
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(message.content || '');
   const [showMenu, setShowMenu] = useState(false);
@@ -85,7 +86,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conve
   return (
     <div className={`flex w-full mb-6 group animate-fade-in-up ${isMine ? 'justify-end' : 'justify-start'}`}>
       {!isMine && (
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex shrink-0 items-center justify-center text-white text-sm font-bold mr-3 mt-auto shadow-md shadow-indigo-500/20 overflow-hidden ring-2 ring-white">
+        <div 
+          onClick={() => { if (onAvatarClick && message.sender?._id) onAvatarClick(message.sender._id); }}
+          className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex shrink-0 items-center justify-center text-white text-sm font-bold mr-3 mt-auto shadow-md shadow-indigo-500/20 overflow-hidden ring-2 ring-white cursor-pointer hover:ring-indigo-300 transition-all"
+          title="Xem trang cá nhân"
+        >
           {message.sender?.avatar ? (
             <img src={message.sender.avatar} alt={message.sender.fullName} className="w-full h-full object-cover" />
           ) : (
@@ -254,7 +259,11 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conve
       </div>
 
       {isMine && (
-        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex shrink-0 items-center justify-center text-white text-sm font-bold ml-3 mt-auto shadow-md shadow-indigo-500/20 overflow-hidden ring-2 ring-white">
+        <div 
+          onClick={() => { if (onAvatarClick && message.sender?._id) onAvatarClick(message.sender._id); }}
+          className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-violet-600 flex shrink-0 items-center justify-center text-white text-sm font-bold ml-3 mt-auto shadow-md shadow-indigo-500/20 overflow-hidden ring-2 ring-white cursor-pointer hover:ring-indigo-300 transition-all"
+          title="Xem trang cá nhân"
+        >
           {message.sender?.avatar ? (
             <img src={message.sender.avatar} alt={message.sender.fullName} className="w-full h-full object-cover" />
           ) : (

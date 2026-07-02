@@ -17,7 +17,8 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ conversationId }) =>
     const fetchMembers = async () => {
       try {
         const res = await participantApi.getParticipants(conversationId);
-        setMembers(res.data);
+        const data = (res.data as any).data || res.data || [];
+        setMembers(data);
       } catch (err: unknown) {
         if (err instanceof AxiosError) {
           setError(err.response?.data?.message || 'Lỗi khi tải thành viên.');
@@ -30,7 +31,7 @@ export const GroupMembers: React.FC<GroupMembersProps> = ({ conversationId }) =>
   const handleRemove = async (userId: string) => {
     if (!user) return;
     try {
-      await participantApi.removeMember(conversationId, userId, user._id);
+      await participantApi.removeMember(conversationId, userId);
       setMembers(members.filter(m => m.userId !== userId));
     } catch (err: unknown) {
       if (err instanceof AxiosError) {

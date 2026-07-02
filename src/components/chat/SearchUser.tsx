@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AxiosError } from 'axios';
 import { searchApi } from '../../api/search.api';
 import type { User } from '../../types/user.type';
@@ -15,12 +15,47 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
   const [query, setQuery] = useState<string>('');
   const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
+  
+  const [history, setHistory] = useState<User[]>([]);
+  const [isFocused, setIsFocused] = useState(false);
+
+  useEffect(() => {
+    const saved = localStorage.getItem('chatweb_search_history');
+    if (saved) {
+      try {
+        setHistory(JSON.parse(saved));
+      } catch (e) {}
+    }
+  }, []);
+
+  const saveToHistory = (user: User) => {
+    setHistory(prev => {
+      const newHistory = [user, ...prev.filter(u => u._id !== user._id)].slice(0, 5);
+      localStorage.setItem('chatweb_search_history', JSON.stringify(newHistory));
+      return newHistory;
+    });
+  };
+
+  const clearHistory = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    setHistory([]);
+    localStorage.removeItem('chatweb_search_history');
+  };
+
+  const removeHistoryItem = (e: React.MouseEvent, userId: string) => {
+    e.stopPropagation();
+    setHistory(prev => {
+      const newHistory = prev.filter(u => u._id !== userId);
+      localStorage.setItem('chatweb_search_history', JSON.stringify(newHistory));
+      return newHistory;
+    });
+  };
 
   const handleSearch = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setQuery(value);
     
-    if (value.length < 2) {
+    if (value.trim().length < 2) {
       setUsers([]);
       return;
     }
@@ -34,6 +69,14 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSelect = (user: User) => {
+    saveToHistory(user);
+    onSelectUser(user);
+    setQuery('');
+    setUsers([]);
+    setIsFocused(false);
   };
 
   return (
@@ -50,6 +93,8 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
           placeholder="Tìm kiếm người dùng..."
           value={query}
           onChange={handleSearch}
+          onFocus={() => setIsFocused(true)}
+          onBlur={() => setTimeout(() => setIsFocused(false), 200)}
           className="block w-full pl-10 pr-3 py-2 border border-slate-200 rounded-xl leading-5 bg-slate-50 placeholder-slate-400 focus:outline-none focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm transition-all shadow-inner"
           autoComplete="off"
         />
@@ -64,21 +109,21 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
         </div>
       )}
 
-      {users.length > 0 && (
-        <ul className="absolute z-10 w-[calc(100%-2rem)] mt-2 mx-auto bg-white rounded-xl shadow-xl border border-slate-100 max-h-80 overflow-auto divide-y divide-slate-100 overflow-hidden">
+      {/* Hiển thị kết quả tìm kiếm */}
+      {query.trim().length >= 2 && users.length > 0 && isFocused && (
+        <ul className="absolute z-10 w-[calc(100%-2rem)] mt-2 mx-auto bg-white rounded-xl shadow-xl border border-slate-100 max-h-80 overflow-auto divide-y divide-slate-100">
           {users.map(user => (
             <li
               key={user._id}
-              id={`search-result-${user._id}`}
-              onClick={() => {
-                onSelectUser(user);
-                setQuery('');
-                setUsers([]);
-              }}
+              onClick={() => handleSelect(user)}
               className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer transition-colors"
             >
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold shadow-sm">
-                {user.fullName.charAt(0).toUpperCase()}
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold shadow-sm overflow-hidden">
+                {user.avatar ? (
+                  <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
+                ) : (
+                  user.fullName.charAt(0).toUpperCase()
+                )}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="text-sm font-semibold text-slate-800 truncate">{user.fullName}</div>
@@ -87,6 +132,48 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
             </li>
           ))}
         </ul>
+      )}
+
+      {/* Hiển thị lịch sử tìm kiếm */}
+      {query.trim().length === 0 && history.length > 0 && isFocused && (
+        <div className="absolute z-10 w-[calc(100%-2rem)] mt-2 mx-auto bg-white rounded-xl shadow-xl border border-slate-100 max-h-80 flex flex-col overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50">
+            <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Lịch sử tìm kiếm</span>
+            <button 
+              onClick={clearHistory}
+              className="text-xs text-slate-400 hover:text-red-500 transition-colors"
+            >
+              Xóa tất cả
+            </button>
+          </div>
+          <ul className="overflow-auto divide-y divide-slate-50">
+            {history.map(user => (
+              <li
+                key={user._id}
+                onClick={() => handleSelect(user)}
+                className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer transition-colors group"
+              >
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold shadow-sm overflow-hidden ring-1 ring-black/5">
+                  {user.avatar ? (
+                    <img src={user.avatar} alt={user.fullName} className="w-full h-full object-cover" />
+                  ) : (
+                    user.fullName.charAt(0).toUpperCase()
+                  )}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="text-sm font-semibold text-slate-700 truncate group-hover:text-blue-600 transition-colors">{user.fullName}</div>
+                </div>
+                <button 
+                  onClick={(e) => removeHistoryItem(e, user._id)}
+                  className="p-1.5 text-slate-300 hover:text-slate-500 hover:bg-slate-200 rounded-full transition-colors opacity-0 group-hover:opacity-100"
+                  title="Xóa khỏi lịch sử"
+                >
+                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </div>
   );

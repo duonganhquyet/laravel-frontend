@@ -207,7 +207,24 @@ export const ChatPage: React.FC = () => {
         ) : activeConversationId ? (
           <div className="flex-1 overflow-hidden relative flex">
             <div className="flex-1 relative">
-              <ChatWindow conversation={activeConversation} conversationId={activeConversationId} />
+              <ChatWindow 
+                conversation={activeConversation} 
+                conversationId={activeConversationId} 
+                onAvatarClick={async (userId) => {
+                  try {
+                    const res = await import('../../api/user.api').then(m => m.userApi.getUserById(userId));
+                    const fetchedUser = (res.data as any).data ?? res.data;
+                    if (fetchedUser) {
+                      setSelectedStranger(fetchedUser);
+                      setStrangerChatUser(null);
+                      setActiveConversationId(undefined);
+                      setActiveConversation(null);
+                    }
+                  } catch (e) {
+                    console.error(e);
+                  }
+                }}
+              />
             </div>
             {isInfoOpen && (
               <ChatInfoDrawer conversationId={activeConversationId} onClose={() => setIsInfoOpen(false)} />

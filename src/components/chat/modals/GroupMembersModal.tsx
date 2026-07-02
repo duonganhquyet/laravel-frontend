@@ -2,7 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { participantApi, conversationApi } from '../../../api/conversation.api';
 import type { ConversationParticipant, Conversation } from '../../../types/conversation.type';
-import { useAuth } from '../../../hooks/useAuth';
+import { useAuthStore } from '../../../store/auth.store';
 
 interface GroupMembersModalProps {
   conversation: Conversation;
@@ -10,7 +10,7 @@ interface GroupMembersModalProps {
 }
 
 export const GroupMembersModal: React.FC<GroupMembersModalProps> = ({ conversation, onClose }) => {
-  const { user } = useAuth();
+  const { user } = useAuthStore();
   const [participants, setParticipants] = useState<ConversationParticipant[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
@@ -19,7 +19,8 @@ export const GroupMembersModal: React.FC<GroupMembersModalProps> = ({ conversati
 
   const fetchParticipants = async () => {
     try {
-      const data = await participantApi.getParticipants(conversation._id);
+      const res = await participantApi.getParticipants(conversation._id);
+      const data = (res.data as any).data || res.data || [];
       setParticipants(data);
     } catch (error) {
       console.error(error);

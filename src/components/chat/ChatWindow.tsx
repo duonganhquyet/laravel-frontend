@@ -14,9 +14,10 @@ import { ChatAvatar } from '../ChatAvatar';
 interface ChatWindowProps {
   conversationId: string;
   conversation: any;
+  onAvatarClick?: (userId: string) => void;
 }
 
-export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversation }) => {
+export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversation, onAvatarClick }) => {
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string>('');
@@ -185,13 +186,24 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
             const isMine = msg.sender?._id === user?._id;
             const readByUsers = msg.readBy?.filter(r => latestReadIndices[r._id] === index && r._id !== user?._id) || [];
 
+            // Sync avatar with participant state
+            const senderParticipant = participants.find(p => p.userId === msg.sender?._id);
+            const displayMessage = {
+              ...msg,
+              sender: msg.sender ? {
+                ...msg.sender,
+                avatar: senderParticipant?.avatar ?? msg.sender.avatar
+              } : null
+            };
+
             return (
               <MessageItem
                 key={msg._id}
-                message={msg}
+                message={displayMessage}
                 isMine={isMine}
                 conversationId={conversationId}
                 readByUsers={readByUsers}
+                onAvatarClick={onAvatarClick}
               />
             );
           });

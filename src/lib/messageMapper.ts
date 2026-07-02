@@ -1,74 +1,61 @@
 import type { Message } from '../types/message.type';
 
-export type BackendSender = {
-  _id?: string;
-  fullName?: string;
-  avatar?: string | null;
-};
-
+/**
+ * Raw backend message object.
+ */
 export type BackendMessage = {
   _id?: string;
+  id?: string | number;
   conversationId?: string;
-  senderId?: string | BackendSender;
-  sender?: string | BackendSender;
+  sender?: {
+    _id?: string;
+    id?: string | number;
+    fullName?: string;
+    avatar?: string | null;
+  } | null;
   content?: string;
-  type?: string;
   messageType?: string;
+  type?: string;
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  isDeletedForAll?: boolean;
+  replyToMessageId?: string | null;
+  readBy?: Array<{ _id?: string; fullName?: string; avatar?: string | null }>;
   createdAt?: string;
   updatedAt?: string;
-  fileUrl?: string;
-  fileName?: string;
-  fileSize?: number;
-  mimeType?: string;
-  replyToMessageId?: string;
-  isDeletedBySender?: boolean;
-  isDeletedForAll?: boolean;
-  deletedAt?: string;
-  readBy?: BackendSender[] | string[];
 };
 
-const getSenderId = (sender: BackendMessage['senderId'] | BackendMessage['sender']) => {
-  if (typeof sender === 'string') return sender;
-  return sender?._id || '';
-};
+export const mapBackendMessage = (message: BackendMessage): Message => {
+  const senderId = message.sender?._id ?? (message.sender?.id ? String(message.sender.id) : '');
 
-const getSender = (sender: BackendMessage['senderId'] | BackendMessage['sender']): { _id: string; fullName: string; avatar: string | null } | undefined => {
-  if (typeof sender === 'object' && sender?._id) {
-    return {
-      _id: sender._id,
-      fullName: sender.fullName || '',
-      avatar: sender.avatar || null,
-    };
-  }
-  return undefined;
+  return {
+    _id:             message._id ?? String(message.id ?? ''),
+    id:              message.id,
+    conversationId:  message.conversationId ?? '',
+    sender:          message.sender ? {
+      _id:      message.sender._id ?? String(message.sender.id ?? ''),
+      fullName: message.sender.fullName ?? '',
+      avatar:   message.sender.avatar ?? null,
+    } : null,
+    content:         message.content ?? '',
+    messageType:     (message.messageType ?? message.type ?? 'text') as Message['messageType'],
+    fileUrl:         message.fileUrl ?? null,
+    fileName:        message.fileName ?? null,
+    fileSize:        message.fileSize ?? null,
+    mimeType:        message.mimeType ?? null,
+    isDeletedForAll: message.isDeletedForAll ?? false,
+    replyToMessageId: message.replyToMessageId ?? null,
+    readBy:          (message.readBy ?? []).map((r: any) => ({
+      _id:      r._id ?? String(r.id ?? ''),
+      fullName: r.fullName ?? '',
+      avatar:   r.avatar ?? null,
+    })),
+    createdAt:  message.createdAt ?? new Date().toISOString(),
+    updatedAt:  message.updatedAt ?? new Date().toISOString(),
+  };
 };
-
-export const mapBackendMessage = (message: BackendMessage): Message => ({
-  MessageId: message._id || '',
-  ConversationId: message.conversationId || '',
-  SenderId: getSenderId(message.sender || message.senderId),
-  Sender: getSender(message.sender || message.senderId),
-  MessageType: message.messageType || message.type || 'text',
-  Content: message.content || '',
-  FileUrl: message.fileUrl,
-  FileName: message.fileName,
-  FileSize: message.fileSize,
-  MimeType: message.mimeType,
-  CreatedAt: message.createdAt || new Date().toISOString(),
-  UpdatedAt: message.updatedAt || new Date().toISOString(),
-  ReplyToMessageId: message.replyToMessageId,
-  IsDeletedBySender: message.isDeletedBySender ?? false,
-  IsDeletedForAll: message.isDeletedForAll ?? false,
-  DeletedAt: message.deletedAt,
-  ReadBy: (message.readBy || []).map((r: any) => {
-    if (typeof r === 'string') return { _id: r, fullName: '', avatar: null };
-    return {
-      _id: r._id || '',
-      fullName: r.fullName || '',
-      avatar: r.avatar || null,
-    };
-  }),
-});
 
 export const mapBackendMessages = (messages: BackendMessage[] = []): Message[] =>
   messages.map(mapBackendMessage);

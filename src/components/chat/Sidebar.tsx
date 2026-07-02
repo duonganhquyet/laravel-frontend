@@ -7,11 +7,11 @@ import { SearchUser } from './SearchUser';
 import { CreateGroupModal } from './modals/CreateGroupModal';
 import { FriendRequestsModal } from './modals/FriendRequestsModal';
 import { friendApi } from '../../api/friend.api';
-import { authApi } from '../../api/auth.api';
 import { userApi } from '../../api/user.api';
 import type { User } from '../../types/user.type';
 import { mapBackendConversations } from '../../lib/conversationMapper';
 import { useSocket } from '../../hooks/useSocket';
+import { ChatAvatar } from '../ChatAvatar';
 
 interface SidebarProps {
   activeConversationId?: string;
@@ -26,14 +26,30 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isFriendRequestsOpen, setIsFriendRequestsOpen] = useState(false);
   const [requestsCount, setRequestsCount] = useState(0);
-  
+
   const [friends, setFriends] = useState<User[]>([]);
   const [isStrangerFolderOpen, setIsStrangerFolderOpen] = useState(false);
-  
+
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const fileInputRef = React.useRef<HTMLInputElement>(null);
   const profileMenuRef = React.useRef<HTMLDivElement>(null);
+  const [activeMenu, setActiveMenu] = useState<string | null>(null);
+
+  const handleDeleteChat = async (conversationId: string) => {
+    setActiveMenu(null);
+    if (!window.confirm('Bạn có chắc muốn xóa lịch sử đoạn chat này?')) return;
+    try {
+      await conversationApi.clearHistory(conversationId);
+      if (activeConversationId === conversationId) {
+        onSelectConversation('');
+      }
+      fetchConversations();
+    } catch (error) {
+      console.error(error);
+      alert('Không thể xóa đoạn chat');
+    }
+  };
 
   const fetchConversations = async () => {
     try {
@@ -57,7 +73,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
     try {
       const reqs = await friendApi.getFriendRequests();
       setRequestsCount(reqs.length);
-      
       const friendList = await friendApi.getFriends();
       setFriends(friendList);
     } catch (e) {
@@ -66,17 +81,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
   };
 
   const handleLogout = async () => {
-    const refreshToken = localStorage.getItem('refreshToken') || ''; 
+    const refreshToken = localStorage.getItem('refreshToken') || '';
     try {
-      if (refreshToken) { 
-        await authApi.logout({ refreshToken });
+      if (refreshToken) {
+        await import('../../api/auth.api').then(m => m.authApi.logout({ refreshToken }));
       }
     } catch (err: unknown) {
-      if (err instanceof AxiosError) {
-        console.error("Lỗi gọi API đăng xuất:", err.response?.data?.message || (err as Error).message);
-      }
+      // ignore
     } finally {
-      logout(); 
+      logout();
     }
   };
 
@@ -87,28 +100,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
 
   useEffect(() => {
     if (!echo) return;
-
-    const cleanupFriendRequest = onEvent('friend_request', async () => {
-      await fetchFriendRequests();
-    });
-
-    const cleanupFriendAccepted = onEvent('friend_accepted', async () => {
-      await fetchFriendRequests();
-      await fetchConversations();
-    });
-
-    const cleanupFriendDeclined = onEvent('friend_declined', async () => {
-      await fetchFriendRequests();
-    });
-
-    return () => {
-      cleanupFriendRequest();
-      cleanupFriendAccepted();
-      cleanupFriendDeclined();
-    };
+    const cleanupFriendRequest  = onEvent('friend_request',  async () => { await fetchFriendRequests(); });
+    const cleanupFriendAccepted = onEvent('friend_accepted', async () => { await fetchFriendRequests(); await fetchConversations(); });
+    const cleanupFriendDeclined = onEvent('friend_declined', async () => { await fetchFriendRequests(); });
+    return () => { cleanupFriendRequest(); cleanupFriendAccepted(); cleanupFriendDeclined(); };
   }, [echo, onEvent]);
 
-  // Handle click outside profile menu
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (profileMenuRef.current && !profileMenuRef.current.contains(event.target as Node)) {
@@ -123,8 +120,8 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 5 * 1024 * 1024) {
-      alert('Kích thước ảnh tối đa là 5MB');
+    if (file.size > 10 * 1024 * 1024) {
+      alert('Kích thước ảnh tối đa là 10MB');
       return;
     }
 
@@ -132,13 +129,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
     setIsProfileMenuOpen(false);
 
     try {
-      const formData = new FormData();
-      formData.append('avatar', file);
-      const res = await userApi.uploadAvatar(formData);
-      
-      const updatedUser = (res.data as any).user;
+      const res = await userApi.uploadAvatar(file);
+      const updatedUser = (res.data as any).data ?? (res.data as any).user;
       if (updatedUser) {
-        updateUser(updatedUser);
+        updateUser({
+          _id:      updatedUser._id ?? String(updatedUser.id),
+          id:       updatedUser.id,
+          fullName: updatedUser.fullName,
+          email:    updatedUser.email,
+          avatar:   updatedUser.avatar,
+        });
       }
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
@@ -151,11 +151,11 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
   };
 
   return (
-    <div className="w-full md:w-[350px] border-r border-white/40 glass-panel flex flex-col h-full shrink-0 z-20">
+    <div className="w-full md:w-[350px] border-r border-slate-100 bg-[#f8f9fa] flex flex-col h-full shrink-0 z-20">
       {/* Profile Header */}
-      <div className="p-5 border-b border-white/30 flex items-center gap-3 relative">
+      <div className="p-5 border-b border-slate-100 flex items-center gap-3 relative">
         <div className="relative" ref={profileMenuRef}>
-          <div 
+          <div
             onClick={() => setIsProfileMenuOpen(!isProfileMenuOpen)}
             className={`relative w-12 h-12 rounded-full ${user?.avatar ? 'bg-slate-100' : 'bg-gradient-to-tr from-indigo-500 to-purple-600'} text-white flex items-center justify-center font-bold text-lg shadow-md ring-2 ring-white/60 cursor-pointer group`}
           >
@@ -166,7 +166,6 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
             ) : (
               user?.fullName?.charAt(0).toUpperCase()
             )}
-            
             {!isUploadingAvatar && (
               <div className="absolute inset-0 bg-black/40 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
                 <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
@@ -174,17 +173,10 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
             )}
           </div>
 
-          {/* Profile Dropdown Menu */}
           {isProfileMenuOpen && (
             <div className="absolute top-[110%] left-0 w-56 bg-white/95 backdrop-blur-md border border-slate-200/80 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.15)] rounded-2xl py-2 z-50 animate-fade-in-up origin-top-left">
-              <input 
-                type="file" 
-                ref={fileInputRef} 
-                hidden 
-                accept="image/*" 
-                onChange={handleAvatarChange} 
-              />
-              <button 
+              <input type="file" ref={fileInputRef} hidden accept="image/*" onChange={handleAvatarChange} />
+              <button
                 onClick={() => fileInputRef.current?.click()}
                 className="w-full px-4 py-2.5 text-left text-[14px] font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2.5"
               >
@@ -192,7 +184,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
                 Thay đổi ảnh đại diện
               </button>
               <div className="h-px bg-slate-100 my-1"></div>
-              <button 
+              <button
                 onClick={handleLogout}
                 className="w-full px-4 py-2.5 text-left text-[14px] font-semibold text-rose-600 hover:bg-rose-50 transition-colors flex items-center gap-2.5"
               >
@@ -202,7 +194,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
             </div>
           )}
         </div>
-        
+
         <div className="flex-1 min-w-0 ml-1">
           <h3 className="font-bold text-slate-800 text-[15px] truncate">{user?.fullName}</h3>
           <div className="flex items-center gap-1.5 mt-0.5">
@@ -210,7 +202,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
             <span className="text-xs text-slate-500 font-medium tracking-wide">Trực tuyến</span>
           </div>
         </div>
-        <button 
+        <button
           onClick={() => setIsFriendRequestsOpen(true)}
           className="relative p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-white/60 rounded-xl transition-all"
           title="Lời mời kết bạn"
@@ -225,26 +217,24 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
       </div>
 
       {/* Action Bar */}
-      <div className="p-4 border-b border-white/30 flex flex-col gap-3">
+      <div className="p-4 border-b border-slate-100 flex flex-col gap-3">
         <div className="flex items-center justify-between px-1">
-          <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tin nhắn</h2>
-          <button 
+          <h2 className="text-[11px] font-bold text-slate-500 uppercase tracking-widest">Tin nhắn</h2>
+          <button
             onClick={() => setIsCreateGroupOpen(true)}
-            className="text-[13px] flex items-center gap-1.5 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-50/80 px-2.5 py-1.5 rounded-lg transition-colors font-semibold"
+            className="text-[13px] flex items-center gap-1.5 text-blue-600 hover:text-blue-700 transition-colors font-semibold"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" /></svg>
             Tạo nhóm
           </button>
         </div>
-        <SearchUser onSelectUser={(user) => {
-          if (onSelectStranger) onSelectStranger(user);
-        }} />
+        <SearchUser onSelectUser={(u) => { if (onSelectStranger) onSelectStranger(u); }} />
       </div>
-      
+
       {/* Stranger Folder Toggle */}
       {isStrangerFolderOpen && (
         <div className="px-5 py-3 border-b border-white/30 bg-indigo-50/50 flex items-center gap-2">
-          <button 
+          <button
             onClick={() => setIsStrangerFolderOpen(false)}
             className="p-1 -ml-1 text-slate-500 hover:text-indigo-600 hover:bg-white rounded-lg transition-all flex items-center justify-center"
             title="Quay lại danh sách chính"
@@ -258,29 +248,27 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
       {/* Conversation List */}
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {error && <div className="m-4 p-3 bg-red-50/80 backdrop-blur-sm text-red-600 rounded-xl text-xs font-medium text-center border border-red-100">{error}</div>}
-        
+
         {(() => {
           const friendIds = new Set(friends.map(f => f._id));
-          
+
           const deduplicateConversations = (convs: Conversation[]) => {
             const seenUsers = new Set<string>();
             return convs.filter(c => {
-              if (c.IsGroupChat) return true;
-              const dedupKey = c.OtherUserId || 'self';
+              if (c.isGroupChat) return true;
+              const dedupKey = c.otherUserId || 'self';
               if (seenUsers.has(dedupKey)) return false;
               seenUsers.add(dedupKey);
               return true;
             });
           };
 
-          const strangerConversations = deduplicateConversations(conversations.filter(
-            c => !c.IsGroupChat && c.OtherUserId && !friendIds.has(c.OtherUserId)
-          ));
-          
-          const normalConversations = deduplicateConversations(conversations.filter(
-            c => c.IsGroupChat || !c.OtherUserId || friendIds.has(c.OtherUserId)
-          ));
-
+          const strangerConversations = deduplicateConversations(
+            conversations.filter(c => !c.isGroupChat && c.otherUserId && !friendIds.has(c.otherUserId))
+          );
+          const normalConversations = deduplicateConversations(
+            conversations.filter(c => c.isGroupChat || !c.otherUserId || friendIds.has(c.otherUserId!))
+          );
           const listToRender = isStrangerFolderOpen ? strangerConversations : normalConversations;
 
           if (normalConversations.length === 0 && strangerConversations.length === 0 && !error) {
@@ -298,7 +286,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
           return (
             <ul className="p-2.5 space-y-1">
               {!isStrangerFolderOpen && strangerConversations.length > 0 && (
-                <li 
+                <li
                   onClick={() => setIsStrangerFolderOpen(true)}
                   className="flex items-center gap-3 p-3 rounded-2xl cursor-pointer transition-all duration-200 border border-transparent hover:bg-orange-50/60 mb-2 group"
                 >
@@ -307,30 +295,32 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
                   </div>
                   <div className="flex-1 min-w-0">
                     <h4 className="font-bold text-[15px] truncate text-orange-700">Tin nhắn người lạ</h4>
-                    <p className="text-[13px] truncate text-orange-500/90 font-medium">
-                      {strangerConversations.length} cuộc trò chuyện
-                    </p>
+                    <p className="text-[13px] truncate text-orange-500/90 font-medium">{strangerConversations.length} cuộc trò chuyện</p>
                   </div>
                 </li>
               )}
 
               {listToRender.map((conv) => (
-                <li 
-                  key={conv.ConversationId}
-                  onClick={() => onSelectConversation(conv.ConversationId)}
-                  className={`flex items-center gap-3.5 p-3 rounded-2xl cursor-pointer transition-all duration-300 border ${
-                    activeConversationId === conv.ConversationId 
-                    ? 'bg-white/80 border-white shadow-[0_4px_15px_-4px_rgba(79,70,229,0.15)]' 
-                    : 'border-transparent hover:bg-white/50'
+                <li
+                  key={conv.conversationId}
+                  onClick={() => onSelectConversation(conv.conversationId)}
+                  className={`relative flex items-center gap-3.5 p-3 rounded-2xl cursor-pointer transition-all duration-300 border group ${
+                    activeConversationId === conv.conversationId
+                      ? 'bg-white border-white shadow-[0_2px_10px_-2px_rgba(0,0,0,0.05)]'
+                      : 'border-transparent hover:bg-slate-100'
                   }`}
                 >
                   <div className={`relative w-12 h-12 shrink-0 rounded-full flex items-center justify-center text-white font-bold text-[15px] shadow-sm ${
-                    conv.IsGroupChat 
-                    ? 'bg-gradient-to-br from-purple-500 to-pink-500' 
-                    : 'bg-gradient-to-br from-indigo-400 to-blue-500'
+                    conv.isGroupChat
+                      ? 'bg-gradient-to-br from-purple-500 to-pink-500'
+                      : 'bg-gradient-to-br from-indigo-400 to-blue-500'
                   }`}>
-                    {(conv.ChatName || '?').charAt(0).toUpperCase()}
-                    {conv.IsGroupChat && (
+                    {conv.otherUserAvatar && !conv.isGroupChat ? (
+                      <img src={conv.otherUserAvatar} alt={conv.chatName} className="w-full h-full rounded-full object-cover" />
+                    ) : (
+                      (conv.chatName || '?').charAt(0).toUpperCase()
+                    )}
+                    {conv.isGroupChat && (
                       <div className="absolute -bottom-1 -right-1 bg-white rounded-full p-0.5 shadow-sm">
                         <div className="bg-purple-500 text-white rounded-full w-[14px] h-[14px] flex items-center justify-center">
                           <svg className="w-2.5 h-2.5" fill="currentColor" viewBox="0 0 20 20"><path d="M13 6a3 3 0 11-6 0 3 3 0 016 0zM18 8a2 2 0 11-4 0 2 2 0 014 0zM14 15a4 4 0 00-8 0v3h8v-3zM6 8a2 2 0 11-4 0 2 2 0 014 0zM16 18v-3a5.972 5.972 0 00-.75-2.906A3.005 3.005 0 0119 15v3h-3zM4.75 12.094A5.973 5.973 0 004 15v3H1v-3a3 3 0 013.75-2.906z" /></svg>
@@ -338,14 +328,39 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex-1 min-w-0">
-                    <h4 className={`font-bold text-[15px] truncate mb-0.5 ${activeConversationId === conv.ConversationId ? 'text-indigo-900' : 'text-slate-800'}`}>
-                      {conv.ChatName}
+                    <h4 className={`font-bold text-[14px] truncate mb-0.5 ${activeConversationId === conv.conversationId ? 'text-indigo-900' : 'text-slate-800'}`}>
+                      {conv.chatName}
                     </h4>
-                    <p className={`text-[13px] font-medium truncate ${activeConversationId === conv.ConversationId ? 'text-indigo-600/80' : 'text-slate-500'}`}>
-                      Nhấn để xem tin nhắn...
+                    <p className={`text-[12px] font-medium truncate ${activeConversationId === conv.conversationId ? 'text-blue-600/80' : 'text-slate-500'}`}>
+                      {conv.latestMessage?.content
+                        ? (conv.latestMessage.content.length > 30 ? conv.latestMessage.content.substring(0, 30) + '...' : conv.latestMessage.content)
+                        : 'Nhấn để xem tin nhắn...'}
                     </p>
+                  </div>
+                  
+                  <div className="absolute right-3 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button 
+                      onClick={(e) => { 
+                        e.stopPropagation(); 
+                        setActiveMenu(activeMenu === conv.conversationId ? null : conv.conversationId); 
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-indigo-600 hover:bg-slate-200 rounded-lg transition-colors"
+                    >
+                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 5v.01M12 12v.01M12 19v.01M12 6a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2zm0 7a1 1 0 110-2 1 1 0 010 2z" /></svg>
+                    </button>
+                    {activeMenu === conv.conversationId && (
+                      <div className="absolute right-0 mt-1 w-36 bg-white rounded-xl shadow-lg border border-slate-100 z-50 animate-fade-in-up">
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleDeleteChat(conv.conversationId); }}
+                          className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-xl transition-colors font-medium flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                          Xóa đoạn chat
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}
@@ -354,25 +369,16 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
         })()}
       </div>
 
-      {/* Removed Logout Footer since it's now in the profile menu */}
-
       {isCreateGroupOpen && (
-        <CreateGroupModal 
-          onClose={() => setIsCreateGroupOpen(false)} 
-          onSuccess={() => {
-            setIsCreateGroupOpen(false);
-            fetchConversations();
-          }} 
+        <CreateGroupModal
+          onClose={() => setIsCreateGroupOpen(false)}
+          onSuccess={() => { setIsCreateGroupOpen(false); fetchConversations(); }}
         />
       )}
-      
+
       {isFriendRequestsOpen && (
-        <FriendRequestsModal 
-          onClose={() => {
-            setIsFriendRequestsOpen(false);
-            fetchFriendRequests();
-            fetchConversations();
-          }} 
+        <FriendRequestsModal
+          onClose={() => { setIsFriendRequestsOpen(false); fetchFriendRequests(); fetchConversations(); }}
         />
       )}
     </div>

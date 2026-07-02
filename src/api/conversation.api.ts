@@ -1,57 +1,75 @@
-import { api } from '../lib/axios'; //[cite: 2]
+import { api } from '../lib/axios';
 import type { Conversation, ConversationParticipant } from '../types/conversation.type';
 
 export const conversationApi = {
-  // Lấy danh sách conversation của User hiện tại
-  getConversations: () => api.get<Conversation[]>('/conversations'),
-  
-  // Tạo chat 1-1
-  createDirectChat: (targetUserId:string) => 
-    api.post<Conversation>('/conversations', { userId: targetUserId }),
-    
-  // Tạo chat nhóm
-  createGroupChat: (chatName: string, userIds:string[]) => 
-    api.post<Conversation>('/conversations/group', { name: chatName, users: userIds }),
+  // GET /conversations – danh sách cuộc trò chuyện
+  getConversations: () =>
+    api.get('/conversations'),
 
-  // Cập nhật tên nhóm, v.v.
-  updateConversation: (id:string, data: Partial<Conversation>) => 
-    api.put<Conversation>(`/conversations/${id}`, data),
+  // POST /conversations – tạo/truy cập chat 1-1
+  createDirectChat: (targetUserId: string) =>
+    api.post('/conversations', { userId: targetUserId }),
 
-  // Đánh dấu đã đọc tất cả tin nhắn trong conversation
-  markAsRead: (conversationId: string) => 
-    api.put<{ success: boolean }>(`/conversations/${conversationId}/read`),
+  // POST /conversations/group – tạo nhóm
+  createGroupChat: (chatName: string, userIds: string[]) =>
+    api.post('/conversations/group', { chatName, users: userIds }),
+
+  // PUT /conversations/:id – đổi tên nhóm
+  updateConversation: (id: string, data: { chatName: string }) =>
+    api.put(`/conversations/${id}`, data),
+
+  // DELETE /conversations/:conversationId – xóa lịch sử chat
+  clearHistory: (conversationId: string) =>
+    api.delete(`/conversations/${conversationId}`),
+
+  // DELETE /conversations/:conversationId/leave – rời nhóm
+  leaveGroup: (conversationId: string) =>
+    api.delete(`/conversations/${conversationId}/leave`),
+
+  // PUT /conversations/:conversationId/read – đánh dấu đã đọc
+  markAsRead: (conversationId: string) =>
+    api.put(`/conversations/${conversationId}/read`),
 };
 
 export const participantApi = {
-  // Lấy thành viên của nhóm
-  getParticipants: (conversationId:string) => 
+  // GET /conversations/:conversationId/participants
+  getParticipants: (conversationId: string) =>
     api.get<ConversationParticipant[]>(`/conversations/${conversationId}/participants`),
-    
-  // Thêm thành viên vào nhóm
-  addMember: (conversationId:string, userId:string) => 
-    api.post<ConversationParticipant>(`/conversations/${conversationId}/participants`, { userId }),
-    
-  // Xóa thành viên (Admin xóa)
-  removeMember: (conversationId:string, userId:string, removeByUserId:string) => 
-    api.delete(`/conversations/${conversationId}/participants/${userId}`, { data: { removeBy: removeByUserId } }),
+
+  // POST /conversations/:conversationId/participants
+  addMember: (conversationId: string, userId: string) =>
+    api.post(`/conversations/${conversationId}/participants`, { userId }),
+
+  // DELETE /conversations/:conversationId/participants/:userId
+  removeMember: (conversationId: string, userId: string) =>
+    api.delete(`/conversations/${conversationId}/participants/${userId}`),
+
+  // PUT /conversations/:conversationId/participants/:userId/admin
+  grantAdmin: (conversationId: string, userId: string) =>
+    api.put(`/conversations/${conversationId}/participants/${userId}/admin`),
 };
 
 export const noteApi = {
-  getNotes: (conversationId: string) => 
+  getNotes: (conversationId: string) =>
     api.get(`/conversations/${conversationId}/notes`),
-  createNote: (conversationId: string, content: string) => 
+
+  createNote: (conversationId: string, content: string) =>
     api.post(`/conversations/${conversationId}/notes`, { content }),
-  updateNote: (noteId: string, content: string) => 
+
+  updateNote: (noteId: string, content: string) =>
     api.put(`/notes/${noteId}`, { content }),
-  deleteNote: (noteId: string) => 
+
+  deleteNote: (noteId: string) =>
     api.delete(`/notes/${noteId}`),
 };
 
 export const pollApi = {
-  getPolls: (conversationId: string) => 
+  getPolls: (conversationId: string) =>
     api.get(`/conversations/${conversationId}/polls`),
-  createPoll: (conversationId: string, question: string, options: string[]) => 
+
+  createPoll: (conversationId: string, question: string, options: string[]) =>
     api.post(`/conversations/${conversationId}/polls`, { question, options }),
-  votePoll: (pollId: string, optionId: string) => 
+
+  votePoll: (pollId: string, optionId: string) =>
     api.post(`/polls/${pollId}/vote`, { optionId }),
 };

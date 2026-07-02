@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
-import { pollApi } from '../../../api/group.api';
+import { pollApi, mapPoll } from '../../../api/group.api';
 import type { Poll } from '../../../types/group.type';
 import { useAuthStore } from '../../../store/auth.store';
 
@@ -25,7 +25,8 @@ export const PollsModal: React.FC<PollsModalProps> = ({ conversationId, onClose 
     setIsLoading(true);
     try {
       const res = await pollApi.getPolls(conversationId);
-      setPolls((res.data as any).data || res.data || []);
+      const rawPolls = (res.data as any).data || res.data || [];
+      setPolls(rawPolls.map(mapPoll));
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
         setError(err.response?.data?.message || 'Không thể tải bình chọn');
@@ -64,9 +65,9 @@ export const PollsModal: React.FC<PollsModalProps> = ({ conversationId, onClose 
     }
   };
 
-  const handleVote = async (pollId: string, optionId: string) => {
+  const handleVote = async (pollId: string | number, optionId: string | number) => {
     try {
-      await pollApi.votePoll(pollId, optionId);
+      await pollApi.votePoll(pollId.toString(), optionId.toString());
       fetchPolls(); // Reload để lấy số vote mới
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
@@ -176,25 +177,23 @@ export const PollsModal: React.FC<PollsModalProps> = ({ conversationId, onClose 
           ) : (
             <div className="space-y-4">
               {polls.map(poll => {
-                // Tính tổng số lượt vote để render thanh progress bar
-                const totalVotes = poll.Options.reduce((acc, opt) => acc + (opt.VoterIds?.length || 0), 0);
+                const totalVotes = poll.options.reduce((acc, opt) => acc + (opt.voterIds?.length || 0), 0);
 
                 return (
-                  <div key={poll.PollId} className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
-                    <h4 className="font-bold text-slate-800 mb-3">{poll.Question}</h4>
+                  <div key={poll.id} className="bg-white p-5 rounded-xl shadow-sm border border-slate-100">
+                    <h4 className="font-bold text-slate-800 mb-3">{poll.question}</h4>
                     <div className="space-y-2">
-                      {poll.Options.map(opt => {
-                        const votes = opt.VoterIds?.length || 0;
+                      {poll.options.map(opt => {
+                        const votes = opt.voterIds?.length || 0;
                         const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
-                        const hasVoted = opt.VoterIds?.includes(user?._id || ''); // Giả định user._id map với VoterIds
+                        const hasVoted = opt.voterIds?.includes(user?._id || user?.id || '');
 
                         return (
                           <div 
-                            key={opt.OptionId}
-                            onClick={() => handleVote(poll.PollId, opt.OptionId)}
+                            key={opt.id}
+                            onClick={() => handleVote(poll.id, opt.id)}
                             className="relative overflow-hidden rounded-lg border border-slate-200 cursor-pointer hover:border-emerald-300 transition-colors group"
                           >
-                            {/* Progress bar background */}
                             <div 
                               className={`absolute inset-y-0 left-0 transition-all duration-500 ${hasVoted ? 'bg-emerald-100' : 'bg-slate-100 group-hover:bg-slate-200'}`}
                               style={{ width: `${percentage}%` }}
@@ -202,7 +201,7 @@ export const PollsModal: React.FC<PollsModalProps> = ({ conversationId, onClose 
                             
                             <div className="relative z-10 flex justify-between items-center p-3">
                               <span className={`text-sm font-medium ${hasVoted ? 'text-emerald-700' : 'text-slate-700'}`}>
-                                {opt.OptionText}
+                                {opt.optionText}
                               </span>
                               <div className="flex items-center gap-2">
                                 {hasVoted && (
@@ -216,7 +215,7 @@ export const PollsModal: React.FC<PollsModalProps> = ({ conversationId, onClose 
                       })}
                     </div>
                     <div className="mt-3 text-right">
-                      <span className="text-[10px] text-slate-400">Tạo bởi #{poll.CreatedByUserId} • {new Date(poll.CreatedAt).toLocaleString('vi-VN')}</span>
+                      <span className="text-[10px] text-slate-400">Tạo bởi #{poll.createdByUserId} • {new Date(poll.createdAt).toLocaleString('vi-VN')}</span>
                     </div>
                   </div>
                 );

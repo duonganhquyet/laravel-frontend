@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { conversationApi } from '../../../api/conversation.api';
 import { friendApi } from '../../../api/friend.api';
 import type { User } from '../../../types/user.type';
@@ -63,13 +64,13 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
     }
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm transition-opacity">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/50 backdrop-blur-sm transition-opacity">
       <div className="bg-white rounded-2xl shadow-xl w-[90%] max-w-md overflow-hidden flex flex-col transform transition-all">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-          <h2 className="text-lg font-bold text-slate-800">Tạo nhóm chat mới</h2>
-          <button onClick={onClose} className="p-1 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
+        <div className="px-6 py-4 border-b border-slate-200 flex justify-between items-center bg-white">
+          <h2 className="text-[16px] font-bold text-slate-800">Tạo nhóm chat mới</h2>
+          <button onClick={onClose} className="p-1.5 hover:bg-slate-100 rounded-lg transition-colors text-slate-400 hover:text-slate-600">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
           </button>
         </div>
@@ -85,7 +86,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
               value={groupName}
               onChange={(e) => setGroupName(e.target.value)}
               placeholder="Nhập tên nhóm..."
-              className="w-full px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm"
+              className="w-full px-4 py-2.5 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-[14px]"
             />
           </div>
 
@@ -96,7 +97,7 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
               value={searchFriend}
               onChange={(e) => setSearchFriend(e.target.value)}
               placeholder="Tìm bạn bè..."
-              className="w-full px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all text-sm mb-3"
+              className="w-full px-4 py-2 bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 transition-all text-[14px] mb-3"
             />
             
             <div className="flex-1 overflow-y-auto max-h-48 custom-scrollbar bg-slate-50 border border-slate-100 rounded-xl p-2 space-y-1">
@@ -114,15 +115,15 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
                       }`}
                     >
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-sky-400 to-blue-500 text-white flex items-center justify-center font-bold text-xs shadow-sm">
+                        <div className="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center font-bold text-xs">
                           {friend.fullName.charAt(0).toUpperCase()}
                         </div>
-                        <span className="text-sm font-semibold text-slate-700">{friend.fullName}</span>
+                        <span className="text-[14px] font-medium text-slate-800">{friend.fullName}</span>
                       </div>
                       <div className={`w-5 h-5 rounded-full border flex items-center justify-center ${
                         isSelected ? 'bg-blue-500 border-blue-500 text-white' : 'border-slate-300'
                       }`}>
-                        {isSelected && <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" /></svg>}
+                        {isSelected && <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" /></svg>}
                       </div>
                     </div>
                   );
@@ -156,22 +157,23 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
         </div>
 
         {/* Footer */}
-        <div className="px-6 py-4 border-t border-slate-100 bg-slate-50 flex justify-end gap-3">
+        <div className="px-6 py-4 border-t border-slate-200 bg-white flex justify-end gap-3">
           <button 
             onClick={onClose}
-            className="px-5 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-200 rounded-xl transition-colors"
+            className="px-5 py-2 text-[14px] font-medium text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
           >
             Hủy
           </button>
           <button 
             onClick={handleCreate}
             disabled={isCreating}
-            className="px-5 py-2 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-md shadow-blue-500/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+            className="px-5 py-2 text-[14px] font-medium text-white bg-blue-600 hover:bg-blue-700 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
           >
             {isCreating ? 'Đang tạo...' : 'Tạo nhóm'}
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

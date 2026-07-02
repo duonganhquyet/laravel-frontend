@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { AxiosError } from 'axios';
-import { userApi } from '../../api/user.api';
+import { searchApi } from '../../api/search.api';
 import type { User } from '../../types/user.type';
 
 interface SearchUsersResponse {
@@ -27,7 +27,7 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
 
     setIsLoading(true);
     try {
-      const res = await userApi.searchUsers(value);
+      const res = await searchApi.searchUsers(value);
       setUsers((res.data as unknown as { data?: SearchUsersResponse }).data?.users || []);
     } catch (err: unknown) {
       if (err instanceof AxiosError) console.error(err);

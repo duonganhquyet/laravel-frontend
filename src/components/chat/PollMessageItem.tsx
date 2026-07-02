@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { pollApi } from '../../api/group.api';
+import { pollApi, mapPoll } from '../../api/group.api';
 import type { Poll } from '../../types/group.type';
 import { useAuthStore } from '../../store/auth.store';
 
@@ -17,8 +17,9 @@ export const PollMessageItem: React.FC<PollMessageItemProps> = ({ pollId, conver
     try {
       setIsLoading(true);
       const res = await pollApi.getPolls(conversationId);
-      const polls = (res.data as any).data || res.data || [];
-      const foundPoll = polls.find((p: Poll) => p.PollId === pollId);
+      const rawPolls = (res.data as any).data || res.data || [];
+      const mappedPolls = rawPolls.map(mapPoll);
+      const foundPoll = mappedPolls.find((p: Poll) => p.id.toString() === pollId.toString());
       if (foundPoll) {
         setPoll(foundPoll);
       }
@@ -33,9 +34,9 @@ export const PollMessageItem: React.FC<PollMessageItemProps> = ({ pollId, conver
     fetchPoll();
   }, [pollId, conversationId]);
 
-  const handleVote = async (optionId: string) => {
+  const handleVote = async (optionId: string | number) => {
     try {
-      await pollApi.votePoll(pollId, optionId);
+      await pollApi.votePoll(pollId, optionId.toString());
       fetchPoll(); // Reload để lấy số vote mới
     } catch (err: any) {
       alert(err.response?.data?.message || 'Không thể bình chọn');
@@ -63,7 +64,7 @@ export const PollMessageItem: React.FC<PollMessageItemProps> = ({ pollId, conver
   }
 
   // Calculate total votes
-  const totalVotes = poll.Options.reduce((acc, opt) => acc + (opt.VoterIds?.length || 0), 0);
+  const totalVotes = poll.options.reduce((acc, opt) => acc + (opt.voterIds?.length || 0), 0);
 
   return (
     <div className="w-full flex justify-center my-4 animate-fade-in-up">
@@ -73,23 +74,22 @@ export const PollMessageItem: React.FC<PollMessageItemProps> = ({ pollId, conver
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
             <span className="text-[11px] font-bold uppercase tracking-wider">Bình chọn nhóm</span>
           </div>
-          <h4 className="font-bold text-white text-[15px] leading-snug">{poll.Question}</h4>
+          <h4 className="font-bold text-white text-[15px] leading-snug">{poll.question}</h4>
         </div>
         
         <div className="p-4 bg-white/50 backdrop-blur-md">
           <div className="space-y-2.5">
-            {poll.Options.map(opt => {
-              const votes = opt.VoterIds?.length || 0;
+            {poll.options.map(opt => {
+              const votes = opt.voterIds?.length || 0;
               const percentage = totalVotes > 0 ? Math.round((votes / totalVotes) * 100) : 0;
-              const hasVoted = opt.VoterIds?.includes(user?._id || '');
+              const hasVoted = opt.voterIds?.includes(user?._id || user?.id || '');
 
               return (
                 <div 
-                  key={opt.OptionId}
-                  onClick={() => handleVote(opt.OptionId)}
+                  key={opt.id}
+                  onClick={() => handleVote(opt.id)}
                   className="relative overflow-hidden rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-300 transition-all group shadow-sm bg-white"
                 >
-                  {/* Progress bar background */}
                   <div 
                     className={`absolute inset-y-0 left-0 transition-all duration-700 ease-out ${hasVoted ? 'bg-emerald-100' : 'bg-slate-50 group-hover:bg-slate-100'}`}
                     style={{ width: `${percentage}%` }}
@@ -97,7 +97,7 @@ export const PollMessageItem: React.FC<PollMessageItemProps> = ({ pollId, conver
                   
                   <div className="relative z-10 flex justify-between items-center p-3">
                     <span className={`text-[13px] font-medium leading-tight max-w-[75%] ${hasVoted ? 'text-emerald-800' : 'text-slate-700'}`}>
-                      {opt.OptionText}
+                      {opt.optionText}
                     </span>
                     <div className="flex items-center gap-1.5 shrink-0">
                       {hasVoted && (

@@ -90,26 +90,26 @@ export const MessageSearch: React.FC<MessageSearchProps> = ({ conversationId, on
         )}
 
         {!isSearching && results.map((m) => (
-          <div key={m.MessageId} className="p-3 mb-1 bg-white hover:bg-slate-50 border border-transparent hover:border-slate-100 rounded-xl transition-all cursor-pointer group">
+          <div key={m._id} className="p-3 mb-1 bg-white hover:bg-slate-50 border border-transparent hover:border-slate-100 rounded-xl transition-all cursor-pointer group">
             <div className="flex justify-between items-center mb-1">
-              <span className="text-xs font-semibold text-blue-600 truncate">{m.Sender?.fullName}</span>
+              <span className="text-xs font-semibold text-blue-600 truncate">{m.sender?.fullName}</span>
               <span className="text-[10px] text-slate-400">
-                {new Date(m.CreatedAt).toLocaleDateString()} {new Date(m.CreatedAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                {new Date(m.createdAt).toLocaleDateString()} {new Date(m.createdAt).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
               </span>
             </div>
             
-            {m.Content && <p className="text-sm text-slate-700 line-clamp-2 leading-relaxed">{m.Content}</p>}
+            {m.content && <p className="text-sm text-slate-700 line-clamp-2 leading-relaxed">{m.content}</p>}
             
-            {m.FileName && (
+            {m.fileName && (
               <a
-                href={m.FileUrl || m.FileName}
+                href={m.fileUrl || m.fileName}
                 target="_blank"
                 rel="noopener noreferrer"
                 onClick={(e) => e.stopPropagation()}
                 className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-blue-50 text-blue-600 rounded-lg text-xs font-medium hover:bg-blue-100 transition-colors"
               >
-                {m.MessageType === 'image' ? '🖼️ Ảnh' : m.MessageType === 'video' ? '🎥 Video' : '📄 File'}
-                <span className="truncate max-w-[150px]">{m.FileName}</span>
+                {m.messageType === 'image' ? '🖼️ Ảnh' : m.messageType === 'video' ? '🎥 Video' : '📄 File'}
+                <span className="truncate max-w-[150px]">{m.fileName}</span>
               </a>
             )}
           </div>

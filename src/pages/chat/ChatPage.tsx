@@ -6,6 +6,7 @@ import { ChatHeader } from '../../components/chat/ChatHeader';
 import type { Conversation } from '../../types/conversation.type';
 import { conversationApi } from '../../api/conversation.api';
 import { AddMemberModal } from '../../components/chat/modals/AddMemberModal';
+import { GroupMembersModal } from '../../components/chat/modals/GroupMembersModal';
 import { NotesModal } from '../../components/chat/modals/NotesModal';
 import { PollsModal } from '../../components/chat/modals/PollsModal';
 import { UserProfileView } from '../../components/chat/UserProfileView';
@@ -114,6 +115,7 @@ export const ChatPage: React.FC = () => {
 
   // Modals state
   const [isAddMemberOpen, setIsAddMemberOpen] = useState(false);
+  const [isGroupMembersOpen, setIsGroupMembersOpen] = useState(false);
   const [isNotesOpen, setIsNotesOpen] = useState(false);
   const [isPollsOpen, setIsPollsOpen] = useState(false);
 
@@ -147,13 +149,13 @@ export const ChatPage: React.FC = () => {
 
   const handleSelectConversation = async (id: string) => {
     setActiveConversationId(id);
-    setSelectedStranger(null); // Tắt profile người lạ khi chọn chat
+    setSelectedStranger(null);
     setStrangerChatUser(null);
 
-    let currentConversation = conversations.find((c) => c.ConversationId === id);
+    let currentConversation = conversations.find((c) => c.conversationId === id);
     if (!currentConversation) {
       const convs = await loadConversations();
-      currentConversation = convs.find((c) => c.ConversationId === id);
+      currentConversation = convs.find((c) => c.conversationId === id);
     }
 
     setActiveConversation(currentConversation || null);
@@ -177,6 +179,7 @@ export const ChatPage: React.FC = () => {
           conversation={activeConversation}
           strangerUser={selectedStranger || strangerChatUser}
           onOpenAddMember={() => setIsAddMemberOpen(true)}
+          onOpenGroupMembers={() => setIsGroupMembersOpen(true)}
           onOpenNotes={() => setIsNotesOpen(true)}
           onOpenPolls={() => setIsPollsOpen(true)}
           onToggleSearch={() => setIsSearchOpen(!isSearchOpen)}
@@ -204,7 +207,7 @@ export const ChatPage: React.FC = () => {
         ) : activeConversationId ? (
           <div className="flex-1 overflow-hidden relative flex">
             <div className="flex-1 relative">
-              <ChatWindow conversationId={activeConversationId} />
+              <ChatWindow conversation={activeConversation} conversationId={activeConversationId} />
             </div>
             {isInfoOpen && (
               <ChatInfoDrawer conversationId={activeConversationId} onClose={() => setIsInfoOpen(false)} />
@@ -227,6 +230,12 @@ export const ChatPage: React.FC = () => {
           <AddMemberModal
             conversationId={activeConversationId}
             onClose={() => setIsAddMemberOpen(false)}
+          />
+        )}
+        {isGroupMembersOpen && activeConversation && (
+          <GroupMembersModal
+            conversation={activeConversation}
+            onClose={() => setIsGroupMembersOpen(false)}
           />
         )}
         {isNotesOpen && activeConversationId && (

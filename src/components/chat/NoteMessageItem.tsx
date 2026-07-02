@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { noteApi } from '../../api/group.api';
+import { noteApi, mapNote } from '../../api/group.api';
 import type { GroupNote } from '../../types/group.type';
 import { useAuthStore } from '../../store/auth.store';
 
@@ -17,8 +17,9 @@ export const NoteMessageItem: React.FC<NoteMessageItemProps> = ({ noteId, conver
     try {
       setIsLoading(true);
       const res = await noteApi.getNotes(conversationId);
-      const notes = (res.data as any).data || res.data || [];
-      const foundNote = notes.find((n: GroupNote) => n.NoteId === noteId);
+      const rawNotes = (res.data as any).data || res.data || [];
+      const mappedNotes = rawNotes.map(mapNote);
+      const foundNote = mappedNotes.find((n: GroupNote) => n.id.toString() === noteId.toString());
       if (foundNote) {
         setNote(foundNote);
       }
@@ -68,12 +69,12 @@ export const NoteMessageItem: React.FC<NoteMessageItemProps> = ({ noteId, conver
         <div className="p-4 bg-white/50 backdrop-blur-md">
           <div className="bg-amber-50/50 rounded-xl p-3 border border-amber-100/50">
             <p className="text-slate-800 text-[14px] whitespace-pre-wrap leading-relaxed">
-              {note.Content}
+              {note.content}
             </p>
           </div>
           <div className="mt-3 flex justify-end">
             <span className="text-[10px] text-slate-400">
-              Tạo bởi #{note.CreatedByUserId} • {new Date(note.CreatedAt).toLocaleString('vi-VN')}
+              Tạo bởi #{note.createdByUserId} • {new Date(note.createdAt).toLocaleString('vi-VN')}
             </span>
           </div>
         </div>

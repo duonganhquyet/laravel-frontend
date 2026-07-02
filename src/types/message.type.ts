@@ -1,33 +1,25 @@
 export interface Message {
-  MessageId: string;
-  ConversationId: string;
-  SenderId: string;
-  Sender?: {
+  _id: string;            // Backend trả _id
+  id?: string | number;
+  conversationId: string;
+  sender: {
     _id: string;
     fullName: string;
     avatar: string | null;
-  };
-  MessageType: string; // 'text', 'image', 'video', 'file'
-  Content: string;
-  FileUrl?: string;
-  FileName?: string;
-  FileSize?: number;
-  MimeType?: string;
-  CreatedAt: string;
-  UpdatedAt: string;
-  ReplyToMessageId?: string;
-  IsDeletedBySender: boolean;
-  IsDeletedForAll: boolean;
-  DeletedAt?: string;
-  ReadBy?: {
+  } | null;
+  content: string;
+  messageType: 'text' | 'image' | 'video' | 'file' | 'system' | 'poll' | 'note';
+  fileUrl?: string | null;
+  fileName?: string | null;
+  fileSize?: number | null;
+  mimeType?: string | null;
+  isDeletedForAll: boolean;
+  replyToMessageId?: string | null;
+  readBy: {
     _id: string;
     fullName: string;
     avatar: string | null;
   }[];
-}
-
-export interface MessageRead {
-  MessageId: string;
-  UserId: string;
-  ReadAt: string;
+  createdAt: string;
+  updatedAt: string;
 }

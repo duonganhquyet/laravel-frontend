@@ -1,38 +1,51 @@
-// src/api/group.api.ts
 import { api } from '../lib/axios';
 import type { Poll, GroupNote } from '../types/group.type';
 
+export const mapNote = (backendNote: any): GroupNote => ({
+  id: backendNote.id ?? backendNote.NoteId,
+  conversationId: backendNote.conversation_id ?? backendNote.ConversationId,
+  content: backendNote.content ?? backendNote.Content,
+  createdByUserId: backendNote.user_id ?? backendNote.CreatedByUserId,
+  createdAt: backendNote.created_at ?? backendNote.CreatedAt,
+  updatedAt: backendNote.updated_at ?? backendNote.UpdatedAt,
+});
+
+export const mapPoll = (backendPoll: any): Poll => ({
+  id: backendPoll.id ?? backendPoll.PollId,
+  conversationId: backendPoll.conversation_id ?? backendPoll.ConversationId,
+  question: backendPoll.question ?? backendPoll.Question,
+  createdByUserId: backendPoll.user_id ?? backendPoll.CreatedByUserId,
+  createdAt: backendPoll.created_at ?? backendPoll.CreatedAt,
+  isActive: backendPoll.is_active ?? backendPoll.IsActive ?? true,
+  options: (backendPoll.options ?? backendPoll.Options ?? []).map((o: any) => ({
+    id: o.id ?? o.OptionId,
+    pollId: o.poll_id ?? o.PollId,
+    optionText: o.option_text ?? o.OptionText,
+    voterIds: (o.votes ?? o.VoterIds ?? []).map((v: any) => v.user_id ?? v),
+  })),
+});
+
 export const pollApi = {
-  // Lấy danh sách bình chọn trong nhóm
   getPolls: (conversationId: string) => 
-    api.get<Poll[]>(`/conversations/${conversationId}/polls`),
+    api.get(`/conversations/${conversationId}/polls`),
 
-  // Tạo bình chọn mới
   createPoll: (conversationId: string, question: string, options: string[]) => 
-    api.post<Poll>(`/conversations/${conversationId}/polls`, { 
-      question, 
-      options 
-    }),
+    api.post(`/conversations/${conversationId}/polls`, { question, options }),
 
-  // Bấm bình chọn (truyền vào OptionId được chọn)
   votePoll: (pollId: string, optionId: string) => 
     api.post(`/polls/${pollId}/vote`, { optionId }),
 };
 
 export const noteApi = {
-  // Lấy danh sách ghi chú
   getNotes: (conversationId: string) => 
-    api.get<GroupNote[]>(`/conversations/${conversationId}/notes`),
+    api.get(`/conversations/${conversationId}/notes`),
 
-  // Tạo ghi chú mới
   createNote: (conversationId: string, content: string) => 
-    api.post<GroupNote>(`/conversations/${conversationId}/notes`, { content }),
+    api.post(`/conversations/${conversationId}/notes`, { content }),
 
-  // Cập nhật ghi chú
   updateNote: (noteId: string, content: string) => 
-    api.put<GroupNote>(`/notes/${noteId}`, { content }),
+    api.put(`/notes/${noteId}`, { content }),
 
-  // Xóa ghi chú (có thể cần check quyền trên backend)
   deleteNote: (noteId: string) => 
     api.delete(`/notes/${noteId}`),
 };

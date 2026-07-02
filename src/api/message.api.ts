@@ -34,7 +34,7 @@ export const messageApi = {
   // Tìm kiếm tin nhắn, ảnh, file
   searchMessages: (conversationId: string, query: string, type?: string) => 
     api.get<Message[]>(`/messages/search`, { 
-      params: { conversationId: conversationId, keyword: query, MessageType: type } 
+      params: { conversationId: conversationId, keyword: query, messageType: type } 
     }),
 
   editMessage: (messageId: string, content: string) =>

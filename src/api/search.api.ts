@@ -1,10 +1,6 @@
-import { api } from '../lib/axios'; //[cite: 2]
-import type { SearchHistory } from '../types/search.type';
+import { api } from '../lib/axios';
 
 export const searchApi = {
-  // Lưu lịch sử tìm kiếm theo Class SearchHistories
-  saveSearchHistory: (data: Partial<SearchHistory>) => 
-    api.post<SearchHistory>('/search-history', data),
-  
-  getSearchHistories: () => api.get<SearchHistory[]>('/search-history'),
+  // GET /search?q=keyword
+  searchUsers: (keyword: string) => api.get('/search', { params: { q: keyword } }),
 };

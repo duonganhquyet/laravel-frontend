@@ -1,24 +1,33 @@
+import type { User } from './user.type';
+import type { Message } from './message.type';
+
 export interface Conversation {
-  ConversationId: string;
-  ChatName: string;
-  IsGroupChat: boolean;
-  GroupAdminId?: string; // Nullable cho chat 1-1
-  LatestMessageId?: string;
-  CreateAt: string;
-  UpdatedAt: string;
-  IsActive: boolean;
-  OtherUserId?: string;
+  _id: string;
+  id: string | number;
+  conversationId: string;        // Primary identifier used throughout the app
+  chatName: string;
+  isGroupChat: boolean;
+  groupAdmins: string[];          // List of user IDs who are admins
+  users: User[];
+  latestMessage?: LatestMessage | null;
+  otherUserId?: string | null;
+  otherUserAvatar?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface LatestMessage {
+  _id: string;
+  content: string;
+  messageType: string;
+  sender?: { _id: string; fullName: string; avatar?: string | null } | null;
+  createdAt: string;
 }
 
 export interface ConversationParticipant {
-  ConversationId?: string;
-  UserId?: string;
-  userId?: string;
-  fullName?: string;
-  JoinedAt?: string;
-  Role?: string;
-  role?: string;
-  IsActive?: boolean;
-  LeftAt?: string;
-  RemoveBy?: string; // Người thực hiện xóa
+  userId: string;
+  fullName: string;
+  email: string;
+  avatar: string | null;
+  role: 'admin' | 'member';
 }

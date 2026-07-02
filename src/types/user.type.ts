@@ -1,15 +1,9 @@
 export interface User {
-  _id: string;
+  _id: string;         // Giữ _id để tương thích với backend response
+  id: string | number;
   fullName: string;
   email: string;
-  // Bỏ qua PasswordHash ở Frontend vì lý do bảo mật
-
-  isVerified: boolean;
-  avatar: string;
-  isOnline: boolean;
-  lastActive: string; // datetime (ISO string)
-  role: string; // enum
-  isActive: boolean;
-  createAt: string;
-  updatedAt: string;
+  avatar: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }

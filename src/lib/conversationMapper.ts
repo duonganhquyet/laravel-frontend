@@ -1,27 +1,45 @@
 import type { Conversation } from '../types/conversation.type';
 
+/**
+ * Raw backend conversation response shape.
+ */
 export interface BackendConversation {
-  conversationId: string;
-  chatName: string;
-  isGroupChat: boolean;
+  _id?: string;
+  id?: string | number;
+  conversationId?: string;
+  chatName?: string;
+  isGroupChat?: boolean;
   groupAdmins?: string[];
+  users?: any[];
   latestMessage?: any;
-  createdAt: string;
-  updatedAt: string;
-  otherUserId?: string; // Sẽ được thêm ở backend
+  otherUserId?: string | null;
+  otherUserAvatar?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const mapBackendConversation = (be: BackendConversation): Conversation => {
+  const id = be.conversationId ?? be._id ?? String(be.id) ?? '';
+
   return {
-    ConversationId: be.conversationId || (be as any)._id || (be as any).id || (be as any).ConversationId,
-    ChatName: be.chatName || (be as any).ChatName || 'Không xác định',
-    IsGroupChat: be.isGroupChat ?? (be as any).IsGroupChat ?? false,
-    GroupAdminId: be.groupAdmins?.[0] || (be as any).GroupAdminId,
-    LatestMessageId: be.latestMessage?._id || (be as any).LatestMessageId,
-    CreateAt: be.createdAt || (be as any).CreateAt,
-    UpdatedAt: be.updatedAt || (be as any).UpdatedAt,
-    IsActive: true,
-    OtherUserId: be.otherUserId || (be as any).OtherUserId
+    _id:             be._id ?? id,
+    id:              be.id ?? id,
+    conversationId:  id,
+    chatName:        be.chatName ?? '',
+    isGroupChat:     be.isGroupChat ?? false,
+    groupAdmins:     be.groupAdmins ?? [],
+    users:           (be.users ?? []).map((u: any) => ({
+      _id:      u._id ?? String(u.id),
+      id:       u.id,
+      fullName: u.fullName ?? u.full_name ?? '',
+      email:    u.email ?? '',
+      avatar:   u.avatar ?? null,
+    })),
+    latestMessage:   be.latestMessage ?? null,
+    otherUserId:     be.otherUserId ?? null,
+    otherUserAvatar: be.otherUserAvatar ?? null,
+    createdAt:       be.createdAt,
+    updatedAt:       be.updatedAt,
   };
 };
 

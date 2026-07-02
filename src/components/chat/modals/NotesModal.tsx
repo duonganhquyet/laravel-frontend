@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
-import { noteApi } from '../../../api/group.api';
+import { noteApi, mapNote } from '../../../api/group.api';
 import type { GroupNote } from '../../../types/group.type';
 import { useAuthStore } from '../../../store/auth.store';
 
@@ -20,11 +20,9 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
   const fetchNotes = async () => {
     setIsLoading(true);
     try {
-      // conversationId is string, but noteApi might expect number if defined so in group.api.ts
-      // Actually axios can serialize string or number in URL
       const res = await noteApi.getNotes(conversationId);
-      // Phụ thuộc vào backend trả về { success, data } hay mảng trực tiếp
-      setNotes((res.data as any).data || res.data || []);
+      const rawNotes = (res.data as any).data || res.data || [];
+      setNotes(rawNotes.map(mapNote));
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
         setError(err.response?.data?.message || 'Không thể tải ghi chú');
@@ -46,7 +44,7 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
     try {
       await noteApi.createNote(conversationId, newNote);
       setNewNote('');
-      fetchNotes(); // Reload notes
+      fetchNotes();
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
         setError(err.response?.data?.message || 'Không thể tạo ghi chú');
@@ -56,11 +54,11 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
     }
   };
 
-  const handleDeleteNote = async (noteId: string) => {
+  const handleDeleteNote = async (noteId: string | number) => {
     if (!window.confirm('Bạn có chắc muốn xóa ghi chú này?')) return;
     try {
-      await noteApi.deleteNote(noteId);
-      setNotes(notes.filter(n => n.NoteId !== noteId));
+      await noteApi.deleteNote(noteId.toString());
+      setNotes(notes.filter(n => n.id.toString() !== noteId.toString()));
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
         alert(err.response?.data?.message || 'Không thể xóa ghi chú');
@@ -70,7 +68,6 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-end bg-slate-900/50 backdrop-blur-sm transition-opacity">
-      {/* Slide-over panel instead of center modal for a better Notes experience */}
       <div className="bg-white shadow-2xl w-full max-w-md h-full flex flex-col transform transition-transform animate-slide-in-right">
         {/* Header */}
         <div className="px-6 py-4 border-b border-slate-100 flex justify-between items-center bg-amber-50">
@@ -102,14 +99,14 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
           ) : (
             <div className="space-y-3">
               {notes.map(note => (
-                <div key={note.NoteId} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 group">
+                <div key={note.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 group">
                   <div className="flex justify-between items-start mb-2">
                     <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
-                      Người dùng #{note.CreatedByUserId}
+                      Người dùng #{note.createdByUserId}
                     </span>
-                    {user?._id === note.CreatedByUserId.toString() && (
+                    {user && (user._id === note.createdByUserId.toString() || user.id === note.createdByUserId) && (
                       <button 
-                        onClick={() => handleDeleteNote(note.NoteId)}
+                        onClick={() => handleDeleteNote(note.id)}
                         className="text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity"
                         title="Xóa ghi chú"
                       >
@@ -117,9 +114,9 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
                       </button>
                     )}
                   </div>
-                  <p className="text-slate-800 text-sm whitespace-pre-wrap leading-relaxed">{note.Content}</p>
+                  <p className="text-slate-800 text-sm whitespace-pre-wrap leading-relaxed">{note.content}</p>
                   <p className="text-[10px] text-slate-400 mt-3 text-right">
-                    {new Date(note.CreatedAt).toLocaleString('vi-VN')}
+                    {new Date(note.createdAt).toLocaleString('vi-VN')}
                   </p>
                 </div>
               ))}

@@ -13,6 +13,7 @@ export interface Conversation {
   latestMessage?: LatestMessage | null;
   otherUserId?: string | null;
   otherUserAvatar?: string | null;
+  unreadCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }

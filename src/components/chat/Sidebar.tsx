@@ -350,15 +350,33 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   </div>
 
                   <div className="flex-1 min-w-0">
-                    <h4 className={`font-bold text-[14px] truncate mb-0.5 ${activeConversationId === conv.conversationId ? 'text-indigo-900' : 'text-slate-800'}`}>
+                    <h4 className={`text-[14px] truncate mb-0.5 ${
+                      activeConversationId === conv.conversationId 
+                        ? 'text-indigo-900 font-extrabold' 
+                        : conv.unreadCount && conv.unreadCount > 0 
+                          ? 'text-slate-900 font-black' 
+                          : 'text-slate-800 font-bold'
+                    }`}>
                       {conv.chatName}
                     </h4>
-                    <p className={`text-[12px] font-medium truncate ${activeConversationId === conv.conversationId ? 'text-blue-600/80' : 'text-slate-500'}`}>
+                    <p className={`text-[12px] truncate ${
+                      activeConversationId === conv.conversationId 
+                        ? 'text-blue-600/80 font-semibold' 
+                        : conv.unreadCount && conv.unreadCount > 0 
+                          ? 'text-slate-900 font-extrabold' 
+                          : 'text-slate-500 font-medium'
+                    }`}>
                       {conv.latestMessage?.content
                         ? (conv.latestMessage.content.length > 30 ? conv.latestMessage.content.substring(0, 30) + '...' : conv.latestMessage.content)
                         : 'Nhấn để xem tin nhắn...'}
                     </p>
                   </div>
+
+                  {conv.unreadCount && conv.unreadCount > 0 ? (
+                    <div className="flex h-[20px] min-w-[20px] px-1.5 items-center justify-center rounded-full bg-rose-500 text-[10px] font-black text-white shadow-sm shrink-0 select-none animate-pulse">
+                      {conv.unreadCount}
+                    </div>
+                  ) : null}
                   
                   <div className="absolute right-3 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button 

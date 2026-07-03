@@ -98,6 +98,9 @@ export const ChatPage: React.FC = () => {
   // Lắng nghe thông báo tin nhắn mới qua socket
   useEffect(() => {
     const cleanup = onEvent('new_message_notification', (data: any) => {
+      // Re-fetch conversations to refresh unread badges and sidebar messages
+      fetchConversations(false);
+
       if (data.conversationId === activeConversationId) {
         return;
       }
@@ -208,6 +211,11 @@ export const ChatPage: React.FC = () => {
     setSelectedStranger(null);
     setStrangerChatUser(strangerFallbackUser || null);
 
+    // Reset unread count locally immediately for responsive feedback
+    setConversations(prev =>
+      prev.map(c => c.conversationId === id ? { ...c, unreadCount: 0 } : c)
+    );
+
     let currentConversation = conversations.find((c) => c.conversationId === id);
     if (!currentConversation) {
       const convs = await fetchConversations(false);
@@ -215,7 +223,8 @@ export const ChatPage: React.FC = () => {
     }
 
     if (currentConversation) {
-      setActiveConversation(currentConversation);
+      // Ensure the active conversation object also has unreadCount reset
+      setActiveConversation({ ...currentConversation, unreadCount: 0 });
       setStrangerChatUser(null);
     } else {
       setActiveConversation(null);

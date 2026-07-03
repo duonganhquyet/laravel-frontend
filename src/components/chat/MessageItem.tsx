@@ -278,7 +278,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conve
           <div className={`shadow-sm relative ${
             isDeleted
               ? 'p-3 px-5 bg-white border border-slate-200 text-slate-400 rounded-3xl rounded-br-sm italic'
-              : message.messageType === 'image' || message.messageType === 'video'
+              : (message.messageType === 'image' || message.messageType === 'video') && !isAudioMessage(message)
                 ? 'p-1 bg-transparent rounded-3xl'
                 : isMine
                   ? `${isAudioMessage(message) ? 'p-2 px-3' : 'p-3 px-4'} bg-[#5b45ff] text-white rounded-[24px] rounded-br-sm`

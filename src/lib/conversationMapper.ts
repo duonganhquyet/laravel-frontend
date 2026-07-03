@@ -14,6 +14,7 @@ export interface BackendConversation {
   latestMessage?: any;
   otherUserId?: string | null;
   otherUserAvatar?: string | null;
+  unreadCount?: number;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -38,6 +39,7 @@ export const mapBackendConversation = (be: BackendConversation): Conversation =>
     latestMessage:   be.latestMessage ?? null,
     otherUserId:     be.otherUserId ?? null,
     otherUserAvatar: be.otherUserAvatar ?? null,
+    unreadCount:     be.unreadCount ?? 0,
     createdAt:       be.createdAt,
     updatedAt:       be.updatedAt,
   };

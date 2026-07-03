@@ -28,8 +28,6 @@ export type BackendMessage = {
 };
 
 export const mapBackendMessage = (message: BackendMessage): Message => {
-  const senderId = message.sender?._id ?? (message.sender?.id ? String(message.sender.id) : '');
-
   return {
     _id:             message._id ?? String(message.id ?? ''),
     id:              message.id,

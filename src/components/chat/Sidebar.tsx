@@ -6,12 +6,9 @@ import { useAuthStore } from '../../store/auth.store';
 import { SearchUser } from './SearchUser';
 import { CreateGroupModal } from './modals/CreateGroupModal';
 import { FriendRequestsModal } from './modals/FriendRequestsModal';
-import { friendApi } from '../../api/friend.api';
 import { userApi } from '../../api/user.api';
 import type { User } from '../../types/user.type';
-import { mapBackendConversations } from '../../lib/conversationMapper';
 import { useSocket } from '../../hooks/useSocket';
-import { ChatAvatar } from '../ChatAvatar';
 import { useToastStore } from '../../store/toast.store';
 import { useConfirmStore } from '../../store/confirm.store';
 
@@ -41,7 +38,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   fetchFriendRequests
 }) => {
   const { user, logout, updateUser } = useAuthStore();
-  const [error, setError] = useState<string>('');
+  const [error, _setError] = useState<string>('');
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isFriendRequestsOpen, setIsFriendRequestsOpen] = useState(false);
 

@@ -1,5 +1,4 @@
 import type { User } from './user.type';
-import type { Message } from './message.type';
 
 export interface Conversation {
   _id: string;

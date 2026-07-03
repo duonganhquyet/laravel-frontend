@@ -1,5 +1,5 @@
 import { api } from '../lib/axios';
-import type { Conversation, ConversationParticipant } from '../types/conversation.type';
+import type { ConversationParticipant } from '../types/conversation.type';
 
 export const conversationApi = {
   // GET /conversations – danh sách cuộc trò chuyện

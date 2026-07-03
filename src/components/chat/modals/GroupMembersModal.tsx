@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AxiosError } from 'axios';
 import { participantApi, conversationApi } from '../../../api/conversation.api';

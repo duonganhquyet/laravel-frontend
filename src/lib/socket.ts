@@ -1,9 +1,16 @@
 import Echo from 'laravel-echo';
 import Pusher from 'pusher-js';
 
+// Extend Window type to allow Pusher property
+declare global {
+  interface Window {
+    Pusher: typeof Pusher;
+  }
+}
+
 window.Pusher = Pusher;
 
-let echoInstance: Echo | null = null;
+let echoInstance: Echo<any> | null = null;
 
 export const initEcho = (token: string | null) => {
   if (echoInstance) {

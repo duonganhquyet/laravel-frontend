@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { noteApi, mapNote } from '../../api/group.api';
 import type { GroupNote } from '../../types/group.type';
-import { useAuthStore } from '../../store/auth.store';
 
 interface NoteMessageItemProps {
   noteId: string;
@@ -9,7 +8,6 @@ interface NoteMessageItemProps {
 }
 
 export const NoteMessageItem: React.FC<NoteMessageItemProps> = ({ noteId, conversationId }) => {
-  const { user } = useAuthStore();
   const [note, setNote] = useState<GroupNote | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 

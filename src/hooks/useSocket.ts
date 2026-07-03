@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { initEcho, getEcho, disconnectEcho } from '../lib/socket';
+import { useEffect, useState, useCallback } from 'react';
+import { initEcho, disconnectEcho } from '../lib/socket';
 import { useAuthStore } from '../store/auth.store';
 import { useOnlineStore } from '../store/online.store';
 import type { Message } from '../types/message.type';
@@ -14,7 +14,7 @@ export interface ParticipantUpdateData {
 }
 
 export interface UseSocketReturn {
-  echo: Echo | null;
+  echo: Echo<any> | null;
   sendRealtimeMessage: (message: Message) => void;
   onMessageReceived: (callback: (msg: BackendMessage) => void) => () => void;
   onMessageUpdated: (callback: (msg: BackendMessage) => void) => () => void;
@@ -27,9 +27,9 @@ export interface UseSocketReturn {
 }
 
 export const useSocket = (activeConversationId?: string): UseSocketReturn => {
-  const [echo, setEcho] = useState<Echo | null>(null);
+  const [echo, setEcho] = useState<Echo<any> | null>(null);
   const { user } = useAuthStore();
-  const echoRef = useRef<Echo | null>(null);
+  // echoRef reserved for future direct echo access if needed
 
   useEffect(() => {
     if (!user) {
@@ -69,15 +69,15 @@ export const useSocket = (activeConversationId?: string): UseSocketReturn => {
   useEffect(() => {
     if (!echo || !activeConversationId) return;
 
-    // Join the channel
-    const channel = echo.private(`chat.${activeConversationId}`);
+    // Join the private channel for this conversation
+    echo.private(`chat.${activeConversationId}`);
 
     return () => {
       echo.leave(`chat.${activeConversationId}`);
     };
   }, [echo, activeConversationId]);
 
-  const sendRealtimeMessage = useCallback((message: Message) => {
+  const sendRealtimeMessage = useCallback((_message: Message) => {
     // In Laravel Reverb, sending is usually done via HTTP and broadcasted back.
     // If you need client-to-client events, use whisper.
     // We assume backend handles the broadcast when a message is sent via API.

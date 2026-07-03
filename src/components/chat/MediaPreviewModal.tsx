@@ -97,6 +97,14 @@ export const MediaPreviewModal: React.FC<MediaPreviewModalProps> = ({ isOpen, on
           </>
         )}
         <button
+          onClick={(e) => { e.stopPropagation(); handleDownload(); }}
+          className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors group relative border border-white/10"
+          title="Tải xuống"
+        >
+          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+          <span className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-black/80 text-white text-[11px] py-1 px-2 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">Tải xuống</span>
+        </button>
+        <button
           onClick={(e) => { e.stopPropagation(); window.open(mediaUrl, '_blank'); }}
           className="p-2 bg-white/10 hover:bg-white/20 text-white rounded-lg transition-colors group relative border border-white/10"
           title="Mở trong thẻ mới"

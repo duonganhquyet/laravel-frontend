@@ -1,6 +1,6 @@
 import type { AxiosProgressEvent } from 'axios';
 import { api } from '../lib/axios'; //[cite: 2]
-import type { Message, MessageRead } from '../types/message.type';
+import type { Message } from '../types/message.type';
 import type { BackendMessage } from '../lib/messageMapper';
 
 interface MessageHistoryResponse {
@@ -35,7 +35,7 @@ export const messageApi = {
 
   // Đánh dấu đã đọc tin nhắn
   markAsRead: (messageId: string) => 
-    api.post<MessageRead>(`/messages/${messageId}/read`),
+    api.post<any>(`/messages/${messageId}/read`),
 
   // Tìm kiếm tin nhắn, ảnh, file
   searchMessages: (conversationId: string, query: string, type?: string) => 

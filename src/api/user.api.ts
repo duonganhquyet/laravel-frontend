@@ -1,5 +1,5 @@
 import { api } from '../lib/axios';
-import type { User } from '../types/user.type';
+
 
 export const userApi = {
   // GET /users/profile

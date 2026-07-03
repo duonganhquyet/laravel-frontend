@@ -389,6 +389,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
             </div>
           )}
 
+          {messages.length === 0 && !isLoadingMore && (
+            <div className="h-[75%] flex flex-col items-center justify-center text-center p-8 select-none animate-fade-in">
+              <div className="w-20 h-20 rounded-3xl bg-indigo-50 flex items-center justify-center mb-6 shadow-sm ring-4 ring-indigo-50/50">
+                <svg className="w-10 h-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
+              </div>
+              <h3 className="text-lg font-bold text-slate-800 mb-2">
+                {conversation?.isGroupChat 
+                  ? `Chào mừng bạn đến với nhóm ${conversation?.chatName || ''}` 
+                  : `Nhắn tin với ${conversation?.chatName || 'người dùng'}`}
+              </h3>
+              <p className="text-slate-500 text-sm max-w-sm font-medium leading-relaxed">
+                {conversation?.isGroupChat 
+                  ? 'Hãy gửi tin nhắn đầu tiên để kết nối và bắt đầu thảo luận cùng mọi người trong nhóm! 💬' 
+                  : 'Hãy gửi tin nhắn đầu tiên, lời chào 👋 hoặc thả nút Like 👍 để kết nối trực tiếp với đối phương!'}
+              </p>
+            </div>
+          )}
+
           {(() => {
             const currentUserId = user?._id ?? (user?.id ? String(user.id) : '');
 

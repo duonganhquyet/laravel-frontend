@@ -12,10 +12,6 @@ interface AuthResponse {
   accessToken: string;
 }
 
-interface LoginApiResponse {
-  data: AuthResponse;
-}
-
 export const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const setAuth = useAuthStore((state) => state.setAuth);

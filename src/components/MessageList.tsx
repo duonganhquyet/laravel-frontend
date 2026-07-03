@@ -1,12 +1,22 @@
 import { useRef, useEffect } from "react";
-import { useChat } from "../hooks/useChat";
+import type { Message } from "../types/message.type";
 import { ChatAvatar } from "./ChatAvatar";
 import { isSameSender, isSameDay, formatDaySeparator } from "../lib/utils";
 import { PollMessageItem } from "./chat/PollMessageItem";
 
-export const MessageList = ({ conversationId }: { conversationId: string }) => {
-  const { messages, loadMore, hasMore, loadingMore, user, page } = useChat(conversationId);
-  
+// This component is a legacy helper — main chat rendering is in ChatWindow.tsx
+// Kept here for compatibility, not used in primary chat flow.
+interface MessageListProps {
+  conversationId: string;
+  messages: Message[];
+  hasMore: boolean;
+  loadingMore: boolean;
+  page: number;
+  currentUserId: string;
+  loadMore: () => void;
+}
+
+export const MessageList = ({ conversationId, messages, hasMore, loadingMore, page, currentUserId, loadMore }: MessageListProps) => {
   const scrollRef = useRef<HTMLDivElement>(null);
   const lastScrollHeight = useRef<number>(0);
 
@@ -61,36 +71,31 @@ export const MessageList = ({ conversationId }: { conversationId: string }) => {
         </div>
       )}
 
-      {messages.map((msg, index) => {
-        // Xử lý an toàn cho SenderId
-        const senderId = msg.SenderId;
-        
-        if (!user || !senderId) return null;
-        
-        const isMine = senderId === user._id;
+      {messages.map((msg: Message, index: number) => {
+        const isMine = msg.sender?._id === currentUserId;
         
         // Kiểm tra xem có cần hiển thị day separator
         const prevMsg = index > 0 ? messages[index - 1] : null;
-        const showDaySeparator = !prevMsg || !isSameDay(prevMsg.CreatedAt, msg.CreatedAt);
+        const showDaySeparator = !prevMsg || !isSameDay(prevMsg.createdAt, msg.createdAt);
         
         // Kiểm tra xem có cần hiển thị avatar/sender name
         const isFirstFromSender = !prevMsg || !isSameSender(msg, prevMsg);
         const showAvatar = !isMine && isFirstFromSender;
         
         // Render system message differently
-        if (msg.MessageType === 'system') {
+        if (msg.messageType === 'system') {
           return (
-            <div key={msg.MessageId}>
+            <div key={msg._id}>
               {showDaySeparator && (
                 <div className="day-separator">
                   <div className="day-separator-line" />
-                  <span className="day-separator-text">{formatDaySeparator(msg.CreatedAt)}</span>
+                  <span className="day-separator-text">{formatDaySeparator(msg.createdAt)}</span>
                   <div className="day-separator-line" />
                 </div>
               )}
               <div className="day-separator my-2">
                 <span className="day-separator-text bg-emerald-50 text-emerald-700 px-3 py-1 rounded-full text-xs border border-emerald-100">
-                  {msg.Content}
+                  {msg.content}
                 </span>
               </div>
             </div>
@@ -98,28 +103,28 @@ export const MessageList = ({ conversationId }: { conversationId: string }) => {
         }
 
         // Render poll message
-        if (msg.MessageType === 'poll') {
+        if (msg.messageType === 'poll') {
           return (
-            <div key={msg.MessageId}>
+            <div key={msg._id}>
               {showDaySeparator && (
                 <div className="day-separator">
                   <div className="day-separator-line" />
-                  <span className="day-separator-text">{formatDaySeparator(msg.CreatedAt)}</span>
+                  <span className="day-separator-text">{formatDaySeparator(msg.createdAt)}</span>
                   <div className="day-separator-line" />
                 </div>
               )}
-              <PollMessageItem pollId={msg.Content} conversationId={conversationId} />
+              <PollMessageItem pollId={msg.content} conversationId={conversationId} />
             </div>
           );
         }
         
         return (
-          <div key={msg.MessageId}>
+          <div key={msg._id}>
             {/* Day separator */}
             {showDaySeparator && (
               <div className="day-separator">
                 <div className="day-separator-line" />
-                <span className="day-separator-text">{formatDaySeparator(msg.CreatedAt)}</span>
+                <span className="day-separator-text">{formatDaySeparator(msg.createdAt)}</span>
                 <div className="day-separator-line" />
               </div>
             )}
@@ -130,8 +135,8 @@ export const MessageList = ({ conversationId }: { conversationId: string }) => {
                 <div className="msg-avatar-placeholder" />
               ) : showAvatar ? (
                 <ChatAvatar 
-                  avatarUrl={msg.Sender?.avatar || null} 
-                  fullName={msg.Sender?.fullName || "User"} 
+                  avatarUrl={msg.sender?.avatar || null} 
+                  fullName={msg.sender?.fullName || "User"} 
                   size={32} 
                 />
               ) : (
@@ -141,16 +146,16 @@ export const MessageList = ({ conversationId }: { conversationId: string }) => {
               <div className="msg-bubble-wrap">
                 {/* Sender name (chỉ hiển thị khi là tin đầu từ người khác) */}
                 {!isMine && isFirstFromSender && (
-                  <p className="msg-sender-name">{msg.Sender?.fullName || "Người dùng"}</p>
+                  <p className="msg-sender-name">{msg.sender?.fullName || "Người dùng"}</p>
                 )}
                 
                 {/* Message bubble */}
                 <div className="msg-bubble">
                   <p style={{ margin: 0, fontSize: '14.5px', lineHeight: '1.55' }}>
-                    {msg.Content}
+                    {msg.content}
                   </p>
                   <span className="msg-time">
-                    {new Date(msg.CreatedAt).toLocaleTimeString("vi-VN", { 
+                    {new Date(msg.createdAt).toLocaleTimeString("vi-VN", { 
                       hour: "2-digit", 
                       minute: "2-digit" 
                     })}

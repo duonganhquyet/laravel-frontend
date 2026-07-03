@@ -8,7 +8,7 @@ export const ConfirmModal: React.FC = () => {
 
   return (
     <div 
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] transition-opacity duration-300 animate-fade-in"
+      className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-[2px] transition-opacity duration-300 animate-fade-in"
       onClick={cancel}
     >
       <div 

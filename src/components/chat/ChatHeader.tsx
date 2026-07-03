@@ -1,6 +1,7 @@
 import React from 'react';
 import type { Conversation } from '../../types/conversation.type';
 import type { User } from '../../types/user.type';
+import { useOnlineStore } from '../../store/online.store';
 
 interface ChatHeaderProps {
   conversation: Conversation | null;
@@ -14,6 +15,8 @@ interface ChatHeaderProps {
   onToggleInfo?: () => void;
   isSearchOpen?: boolean;
   isInfoOpen?: boolean;
+  isClosed?: boolean;
+  onAvatarClick?: (userId: string) => void;
 }
 
 export const ChatHeader: React.FC<ChatHeaderProps> = ({
@@ -27,7 +30,9 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
   onToggleSearch,
   onToggleInfo,
   isSearchOpen,
-  isInfoOpen
+  isInfoOpen,
+  isClosed,
+  onAvatarClick
 }) => {
   if (!conversation && !strangerUser) {
     return (
@@ -37,10 +42,21 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
     );
   }
 
-  const isStranger   = !conversation && !!strangerUser;
+  const { onlineUserIds } = useOnlineStore();
+  const targetUserId = conversation 
+    ? conversation.otherUserId 
+    : strangerUser?._id || strangerUser?.id;
+  const isOnline = targetUserId ? onlineUserIds.includes(String(targetUserId)) : false;
+
   const displayName  = conversation ? conversation.chatName : strangerUser?.fullName || '';
   const isGroup      = conversation ? conversation.isGroupChat : false;
   const avatarUrl    = conversation?.otherUserAvatar ?? strangerUser?.avatar ?? null;
+
+  const handleUserClick = () => {
+    if (!isGroup && targetUserId && onAvatarClick) {
+      onAvatarClick(String(targetUserId));
+    }
+  };
 
   return (
     <div className="h-[72px] border-b border-white/40 glass-panel flex items-center justify-between px-6 z-10 sticky top-0">
@@ -50,31 +66,39 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" /></svg>
         </button>
 
-        {/* Avatar */}
-        <div className={`relative w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md ring-2 ring-white ${
-          isGroup
-            ? 'bg-gradient-to-br from-purple-500 to-pink-500 shadow-purple-500/20'
-            : 'bg-gradient-to-br from-sky-400 to-blue-500 shadow-blue-500/20'
-        }`}>
-          {avatarUrl && !isGroup ? (
-            <img src={avatarUrl} alt={displayName} className="w-full h-full rounded-full object-cover" />
-          ) : (
-            (displayName || '?').charAt(0).toUpperCase()
-          )}
-          {!isGroup && (
-            <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
-          )}
-        </div>
-
-        {/* Info */}
-        <div className="flex flex-col justify-center">
-          <h2 className="font-bold text-slate-800 text-[16px] tracking-tight">{displayName}</h2>
-          <div className="flex items-center gap-1.5 mt-0.5">
-            {isGroup ? (
-              <span className="text-[12px] text-slate-500 font-medium tracking-wide">Nhóm trò chuyện</span>
+        {/* Profile info section (clickable in DMs) */}
+        <div 
+          onClick={handleUserClick}
+          className={`flex items-center gap-3.5 ${!isGroup && targetUserId ? 'cursor-pointer hover:opacity-80 transition-all' : ''}`}
+        >
+          {/* Avatar */}
+          <div className={`relative w-11 h-11 rounded-full flex items-center justify-center text-white font-bold text-lg shadow-md ring-2 ring-white shrink-0 ${
+            isGroup
+              ? 'bg-gradient-to-br from-purple-500 to-pink-500 shadow-purple-500/20'
+              : 'bg-gradient-to-br from-sky-400 to-blue-500 shadow-blue-500/20'
+          }`}>
+            {avatarUrl && !isGroup ? (
+              <img src={avatarUrl} alt={displayName} className="w-full h-full rounded-full object-cover" />
             ) : (
-              <span className="text-[12px] text-slate-500 font-medium tracking-wide">Đang hoạt động</span>
+              (displayName || '?').charAt(0).toUpperCase()
             )}
+            {!isGroup && isOnline && (
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
+            )}
+          </div>
+
+          {/* Info */}
+          <div className="flex flex-col justify-center">
+            <h2 className="font-bold text-slate-800 text-[15px] tracking-tight leading-snug">{displayName}</h2>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              {isGroup ? (
+                <span className="text-[12px] text-slate-500 font-medium tracking-wide">Nhóm trò chuyện</span>
+              ) : isOnline ? (
+                <span className="text-[12px] text-slate-500 font-medium tracking-wide">Đang hoạt động</span>
+              ) : (
+                <span className="text-[12px] text-slate-400 font-medium tracking-wide">Không hoạt động</span>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -88,21 +112,29 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
             <button onClick={onOpenGroupMembers} className="p-2.5 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-full transition-all" title="Danh sách thành viên">
               <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z" /></svg>
             </button>
-            <button onClick={onOpenNotes} className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-all" title="Ghi chú nhóm">
-              <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
-            </button>
-            <button onClick={onOpenPolls} className="p-2.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-full transition-all mr-1" title="Bình chọn">
-              <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
-            </button>
+            {!isClosed && (
+              <>
+                <button onClick={onOpenNotes} className="p-2.5 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-full transition-all" title="Ghi chú nhóm">
+                  <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>
+                </button>
+                <button onClick={onOpenPolls} className="p-2.5 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-full transition-all mr-1" title="Bình chọn">
+                  <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>
+                </button>
+              </>
+            )}
             <div className="w-px h-6 bg-slate-200/80 mx-2"></div>
           </>
         )}
-        <button onClick={onToggleSearch} className={`p-2.5 rounded-full transition-colors ${isSearchOpen ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100/80'}`} title="Tìm kiếm tin nhắn">
-          <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-        </button>
-        <button onClick={onToggleInfo} className={`p-2.5 rounded-full transition-colors ${isInfoOpen ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100/80'}`} title="Thông tin">
-          <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-        </button>
+        {!isClosed && (
+          <>
+            <button onClick={onToggleSearch} className={`p-2.5 rounded-full transition-colors ${isSearchOpen ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100/80'}`} title="Tìm kiếm tin nhắn">
+              <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            </button>
+            <button onClick={onToggleInfo} className={`p-2.5 rounded-full transition-colors ${isInfoOpen ? 'bg-indigo-100 text-indigo-600' : 'text-slate-400 hover:text-indigo-600 hover:bg-slate-100/80'}`} title="Thông tin">
+              <svg className="w-[22px] h-[22px]" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            </button>
+          </>
+        )}
       </div>
     </div>
   );

@@ -115,7 +115,7 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
           {users.map(user => (
             <li
               key={user._id}
-              onClick={() => handleSelect(user)}
+              onMouseDown={() => handleSelect(user)}
               className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer transition-colors"
             >
               <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold shadow-sm overflow-hidden">
@@ -140,7 +140,7 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
           <div className="flex items-center justify-between px-4 py-2 border-b border-slate-100 bg-slate-50">
             <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Lịch sử tìm kiếm</span>
             <button 
-              onClick={clearHistory}
+              onMouseDown={clearHistory}
               className="text-xs text-slate-400 hover:text-red-500 transition-colors"
             >
               Xóa tất cả
@@ -150,7 +150,7 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
             {history.map(user => (
               <li
                 key={user._id}
-                onClick={() => handleSelect(user)}
+                onMouseDown={() => handleSelect(user)}
                 className="flex items-center gap-3 p-3 hover:bg-slate-50 cursor-pointer transition-colors group"
               >
                 <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gradient-to-tr from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 font-bold shadow-sm overflow-hidden ring-1 ring-black/5">
@@ -164,7 +164,7 @@ export const SearchUser: React.FC<SearchUserProps> = ({ onSelectUser }) => {
                   <div className="text-sm font-semibold text-slate-700 truncate group-hover:text-blue-600 transition-colors">{user.fullName}</div>
                 </div>
                 <button 
-                  onClick={(e) => removeHistoryItem(e, user._id)}
+                  onMouseDown={(e) => removeHistoryItem(e, user._id)}
                   className="p-1.5 text-slate-300 hover:text-slate-500 hover:bg-slate-200 rounded-full transition-colors opacity-0 group-hover:opacity-100"
                   title="Xóa khỏi lịch sử"
                 >

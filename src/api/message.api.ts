@@ -1,3 +1,4 @@
+import type { AxiosProgressEvent } from 'axios';
 import { api } from '../lib/axios'; //[cite: 2]
 import type { Message, MessageRead } from '../types/message.type';
 import type { BackendMessage } from '../lib/messageMapper';
@@ -10,12 +11,16 @@ interface MessageHistoryResponse {
 }
 
 export const messageApi = {
-  // Lấy lịch sử tin nhắn của một conversation
-  getMessages: (conversationId: string) => 
-    api.get<{ data: MessageHistoryResponse }>(`/messages/${conversationId}`),
+  getMessages: (conversationId: string, page = 1, limit = 30) => 
+    api.get<{ data: MessageHistoryResponse }>(`/messages/${conversationId}`, { params: { page, limit } }),
 
   // Gửi tin nhắn (Hỗ trợ file đính kèm dựa trên MessageType)
-  sendMessage: (conversationId: string, content: string, file?: File) => {
+  sendMessage: (
+    conversationId: string,
+    content: string,
+    file?: File,
+    onUploadProgress?: (progressEvent: AxiosProgressEvent) => void
+  ) => {
     const formData = new FormData();
     formData.append('conversationId', conversationId.toString());
     formData.append('content', content);
@@ -23,7 +28,8 @@ export const messageApi = {
       formData.append('file', file); // Sẽ xử lý để lấy FileName, FileSize, MimeType tại backend
     }
     return api.post<BackendMessage>('/messages', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress
     });
   },
 

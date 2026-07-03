@@ -8,6 +8,8 @@ export const mapNote = (backendNote: any): GroupNote => ({
   createdByUserId: backendNote.user_id ?? backendNote.CreatedByUserId,
   createdAt: backendNote.created_at ?? backendNote.CreatedAt,
   updatedAt: backendNote.updated_at ?? backendNote.UpdatedAt,
+  creatorName: backendNote.creator_name ?? backendNote.CreatorName,
+  creatorAvatar: backendNote.creator_avatar ?? backendNote.CreatorAvatar,
 });
 
 export const mapPoll = (backendPoll: any): Poll => ({

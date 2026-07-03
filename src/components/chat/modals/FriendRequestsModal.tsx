@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { friendApi, type FriendRequest } from '../../../api/friend.api';
+import { useToastStore } from '../../../store/toast.store';
 
 interface FriendRequestsModalProps {
   onClose: () => void;
@@ -30,8 +31,10 @@ export const FriendRequestsModal: React.FC<FriendRequestsModalProps> = ({ onClos
     try {
       await friendApi.acceptRequest(requestId);
       setRequests(requests.filter(r => r.id !== requestId));
+      useToastStore.getState().success('Đã chấp nhận lời mời kết bạn!');
     } catch (e) {
       console.error(e);
+      useToastStore.getState().error('Không thể chấp nhận lời mời kết bạn.');
     }
   };
 
@@ -39,8 +42,10 @@ export const FriendRequestsModal: React.FC<FriendRequestsModalProps> = ({ onClos
     try {
       await friendApi.rejectRequest(requestId);
       setRequests(requests.filter(r => r.id !== requestId));
+      useToastStore.getState().success('Đã từ chối lời mời kết bạn.');
     } catch (e) {
       console.error(e);
+      useToastStore.getState().error('Không thể từ chối lời mời kết bạn.');
     }
   };
 

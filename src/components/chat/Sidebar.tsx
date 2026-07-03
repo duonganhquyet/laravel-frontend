@@ -12,22 +12,39 @@ import type { User } from '../../types/user.type';
 import { mapBackendConversations } from '../../lib/conversationMapper';
 import { useSocket } from '../../hooks/useSocket';
 import { ChatAvatar } from '../ChatAvatar';
+import { useToastStore } from '../../store/toast.store';
+import { useConfirmStore } from '../../store/confirm.store';
 
 interface SidebarProps {
   activeConversationId?: string;
-  onSelectConversation: (id: string) => void;
+  onSelectConversation: (id: string, strangerFallbackUser?: User | null) => void;
   onSelectStranger?: (user: User) => void;
+
+  // Lifted props
+  conversations: Conversation[];
+  friends: User[];
+  requestsCount: number;
+  isLoading: boolean;
+  fetchConversations: (showLoading?: boolean) => Promise<any>;
+  fetchFriendRequests: () => Promise<any>;
 }
 
-export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelectConversation, onSelectStranger }) => {
+export const Sidebar: React.FC<SidebarProps> = ({ 
+  activeConversationId, 
+  onSelectConversation, 
+  onSelectStranger,
+  conversations,
+  friends,
+  requestsCount,
+  isLoading,
+  fetchConversations,
+  fetchFriendRequests
+}) => {
   const { user, logout, updateUser } = useAuthStore();
-  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [error, setError] = useState<string>('');
   const [isCreateGroupOpen, setIsCreateGroupOpen] = useState(false);
   const [isFriendRequestsOpen, setIsFriendRequestsOpen] = useState(false);
-  const [requestsCount, setRequestsCount] = useState(0);
 
-  const [friends, setFriends] = useState<User[]>([]);
   const [isStrangerFolderOpen, setIsStrangerFolderOpen] = useState(false);
 
   const [isProfileMenuOpen, setIsProfileMenuOpen] = useState(false);
@@ -38,47 +55,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
 
   const handleDeleteChat = async (conversationId: string) => {
     setActiveMenu(null);
-    if (!window.confirm('Bạn có chắc muốn xóa lịch sử đoạn chat này?')) return;
+    const confirmed = await useConfirmStore.getState().show({
+      title: 'Xóa lịch sử trò chuyện',
+      message: 'Bạn có chắc muốn xóa lịch sử đoạn chat này?',
+      confirmText: 'Xóa',
+    });
+    if (!confirmed) return;
     try {
       await conversationApi.clearHistory(conversationId);
       if (activeConversationId === conversationId) {
         onSelectConversation('');
       }
-      fetchConversations();
+      fetchConversations(false);
+      useToastStore.getState().success('Đã xóa lịch sử đoạn chat thành công');
     } catch (error) {
       console.error(error);
-      alert('Không thể xóa đoạn chat');
-    }
-  };
-
-  const fetchConversations = async () => {
-    try {
-      const res = await conversationApi.getConversations();
-      const rawData = (res.data as any).data || res.data || [];
-      setConversations(mapBackendConversations(rawData));
-    } catch (err: unknown) {
-      if (err instanceof AxiosError) {
-        if (err.response?.status === 401) {
-          setConversations([]);
-        } else {
-          setError(err.response?.data?.message || 'Không thể tải danh sách chat');
-        }
-      }
+      useToastStore.getState().error('Không thể xóa đoạn chat');
     }
   };
 
   const { echo, onEvent } = useSocket();
-
-  const fetchFriendRequests = async () => {
-    try {
-      const reqs = await friendApi.getFriendRequests();
-      setRequestsCount(reqs.length);
-      const friendList = await friendApi.getFriends();
-      setFriends(friendList);
-    } catch (e) {
-      console.error(e);
-    }
-  };
 
   const handleLogout = async () => {
     const refreshToken = localStorage.getItem('refreshToken') || '';
@@ -94,17 +90,26 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
   };
 
   useEffect(() => {
-    fetchConversations();
-    fetchFriendRequests();
-  }, [activeConversationId]);
-
-  useEffect(() => {
     if (!echo) return;
-    const cleanupFriendRequest  = onEvent('friend_request',  async () => { await fetchFriendRequests(); });
-    const cleanupFriendAccepted = onEvent('friend_accepted', async () => { await fetchFriendRequests(); await fetchConversations(); });
-    const cleanupFriendDeclined = onEvent('friend_declined', async () => { await fetchFriendRequests(); });
-    return () => { cleanupFriendRequest(); cleanupFriendAccepted(); cleanupFriendDeclined(); };
-  }, [echo, onEvent]);
+    const cleanupFriendRequest  = onEvent('friend-request',  async (data: any) => { 
+      await fetchFriendRequests(); 
+      useToastStore.getState().info(`${data.senderName || 'Ai đó'} đã gửi cho bạn một lời mời kết bạn!`);
+    });
+    const cleanupFriendAccepted = onEvent('friend-accepted', async (data: any) => { 
+      await fetchFriendRequests(); 
+      await fetchConversations(false); 
+      useToastStore.getState().success(`${data.accepterName || 'Ai đó'} đã chấp nhận lời mời kết bạn!`);
+    });
+    const cleanupGroupAdded = onEvent('group-added', async (data: any) => {
+      await fetchConversations(false);
+      useToastStore.getState().success(data.message || 'Bạn đã được thêm vào một nhóm chat mới!');
+    });
+    return () => { 
+      cleanupFriendRequest(); 
+      cleanupFriendAccepted(); 
+      cleanupGroupAdded(); 
+    };
+  }, [echo, onEvent, fetchFriendRequests, fetchConversations]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -121,7 +126,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('Kích thước ảnh tối đa là 10MB');
+      useToastStore.getState().warning('Kích thước ảnh tối đa là 10MB');
       return;
     }
 
@@ -139,11 +144,14 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
           email:    updatedUser.email,
           avatar:   updatedUser.avatar,
         });
+        useToastStore.getState().success('Cập nhật ảnh đại diện thành công!');
       }
     } catch (err: unknown) {
+      let errMsg = 'Lỗi tải ảnh lên';
       if (err instanceof AxiosError) {
-        alert(err.response?.data?.message || 'Lỗi tải ảnh lên');
+        errMsg = err.response?.data?.message || errMsg;
       }
+      useToastStore.getState().error(errMsg);
     } finally {
       setIsUploadingAvatar(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -249,7 +257,19 @@ export const Sidebar: React.FC<SidebarProps> = ({ activeConversationId, onSelect
       <div className="flex-1 overflow-y-auto custom-scrollbar">
         {error && <div className="m-4 p-3 bg-red-50/80 backdrop-blur-sm text-red-600 rounded-xl text-xs font-medium text-center border border-red-100">{error}</div>}
 
-        {(() => {
+        {isLoading ? (
+          <div className="p-3 space-y-3">
+            {[...Array(5)].map((_, i) => (
+              <div key={i} className="flex items-center gap-3.5 p-3 rounded-2xl animate-pulse">
+                <div className="w-12 h-12 bg-slate-200 rounded-full shrink-0" />
+                <div className="flex-1 min-w-0 space-y-2">
+                  <div className="h-4 bg-slate-200 rounded w-1/2" />
+                  <div className="h-3 bg-slate-200 rounded w-5/6" />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (() => {
           const friendIds = new Set(friends.map(f => f._id));
 
           const deduplicateConversations = (convs: Conversation[]) => {

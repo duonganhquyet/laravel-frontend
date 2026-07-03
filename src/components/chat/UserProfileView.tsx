@@ -1,20 +1,26 @@
 import React, { useEffect, useState } from 'react';
+import { AxiosError } from 'axios';
 import type { User } from '../../types/user.type';
 import { friendApi, type FriendStatus } from '../../api/friend.api';
 import { conversationApi } from '../../api/conversation.api';
 import { useAuthStore } from '../../store/auth.store';
+import { useToastStore } from '../../store/toast.store';
+import { useSocket } from '../../hooks/useSocket';
+import { useConfirmStore } from '../../store/confirm.store';
 
 interface UserProfileViewProps {
   user: User;
   onStartChat: (conversationId: string) => void;
   onClose: () => void;
+  friends?: User[];
 }
 
-export const UserProfileView: React.FC<UserProfileViewProps> = ({ user, onStartChat, onClose }) => {
+export const UserProfileView: React.FC<UserProfileViewProps> = ({ user, onStartChat, onClose, friends }) => {
   const { user: currentUser } = useAuthStore();
   const [friendStatus, setFriendStatus] = useState<FriendStatus>('none');
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
+  const { echo, onEvent } = useSocket();
 
   const fetchStatus = async () => {
     setIsLoading(true);
@@ -31,28 +37,65 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ user, onStartC
 
   useEffect(() => {
     fetchStatus();
-  }, [user._id]);
+  }, [user._id, friends]);
+
+  useEffect(() => {
+    if (!echo) return;
+
+    // Listen for when someone accepts our request
+    const cleanupFriendAccepted = onEvent('friend-accepted', (data: any) => {
+      if (data.accepterId === user._id || data.requesterId === user._id) {
+        fetchStatus();
+      }
+    });
+
+    // Listen for when someone sends us a request
+    const cleanupFriendRequest = onEvent('friend-request', (data: any) => {
+      if (data.senderId === user._id) {
+        fetchStatus();
+      }
+    });
+
+    return () => {
+      cleanupFriendAccepted();
+      cleanupFriendRequest();
+    };
+  }, [echo, onEvent, user._id]);
 
   const handleAction = async (action: 'add' | 'cancel' | 'unfriend' | 'accept') => {
     setIsActionLoading(true);
     try {
       if (action === 'add') {
         await friendApi.sendFriendRequest(user._id);
+        useToastStore.getState().success(`Đã gửi lời mời kết bạn đến ${user.fullName}`);
       } else if (action === 'cancel') {
         await friendApi.cancelRequest(user._id);
+        useToastStore.getState().success('Đã thu hồi lời mời kết bạn.');
       } else if (action === 'unfriend') {
-        if (window.confirm(`Bạn có chắc muốn hủy kết bạn với ${user.fullName}?`)) {
-          await friendApi.unfriend(user._id);
-        }
+        const confirmed = await useConfirmStore.getState().show({
+          title: 'Hủy kết bạn',
+          message: `Bạn có chắc muốn hủy kết bạn với ${user.fullName}?`,
+          confirmText: 'Hủy kết bạn',
+        });
+        if (!confirmed) return;
+        await friendApi.unfriend(user._id);
+        useToastStore.getState().success(`Đã hủy kết bạn với ${user.fullName}.`);
       } else if (action === 'accept') {
-        // Trong thực tế cần có requestId, ở mock này ta sẽ mock việc chấp nhận bằng ID user luôn (hoặc bỏ qua)
-        // Vì mock API expect requestId, mà ở đây ta chỉ có user._id. Ta sẽ cần gọi endpoint riêng hoặc thay đổi logic mock.
-        // Để đơn giản, giả lập lấy được reqId từ getFriendRequests.
         const reqs = await friendApi.getFriendRequests();
         const req = reqs.find(r => r.sender._id === user._id);
-        if (req) await friendApi.acceptRequest(req.id);
+        if (req) {
+          await friendApi.acceptRequest(req.id);
+          useToastStore.getState().success(`Hai bạn hiện đã là bạn bè!`);
+        }
       }
       await fetchStatus();
+    } catch (err: unknown) {
+      console.error(err);
+      let errMsg = 'Không thể thực hiện tác vụ.';
+      if (err instanceof AxiosError) {
+        errMsg = err.response?.data?.message || errMsg;
+      }
+      useToastStore.getState().error(errMsg);
     } finally {
       setIsActionLoading(false);
     }
@@ -68,16 +111,12 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ user, onStartC
       if (conversationId) {
         onStartChat(conversationId);
       } else {
-        alert("Không thể lấy ID cuộc trò chuyện.");
+        useToastStore.getState().error("Không thể lấy ID cuộc trò chuyện.");
       }
     } catch (e: unknown) {
       console.error(e);
-      if (e instanceof Error) {
-        // @ts-ignore
-        alert(e.response?.data?.message || 'Có lỗi xảy ra khi tạo cuộc trò chuyện');
-      } else {
-        alert('Có lỗi xảy ra khi tạo cuộc trò chuyện');
-      }
+      const msg = (e as any).response?.data?.message || (e instanceof Error ? e.message : 'Có lỗi xảy ra khi tạo cuộc trò chuyện');
+      useToastStore.getState().error(msg);
     } finally {
       setIsActionLoading(false);
     }

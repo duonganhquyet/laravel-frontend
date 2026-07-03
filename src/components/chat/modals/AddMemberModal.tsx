@@ -18,17 +18,32 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ conversationId, 
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
+  const [existingUserIds, setExistingUserIds] = useState<Set<string>>(new Set());
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    const fetchFriends = async () => {
+    const loadData = async () => {
+      setIsLoading(true);
       try {
-        const data = await friendApi.getFriends();
-        setFriends(data);
+        const [friendsData, participantsData] = await Promise.all([
+          friendApi.getFriends(),
+          participantApi.getParticipants(conversationId)
+        ]);
+
+        const participantsList = (participantsData.data as any).data || participantsData.data || [];
+        const userIds = new Set<string>(participantsList.map((p: any) => p.userId));
+        setExistingUserIds(userIds);
+        setFriends(friendsData);
       } catch (e) {
         console.error(e);
+      } finally {
+        setIsLoading(false);
       }
     };
-    fetchFriends();
-  }, []);
+    if (conversationId) {
+      loadData();
+    }
+  }, [conversationId]);
 
   const handleAdd = async () => {
     if (!selectedUser) {
@@ -85,10 +100,33 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ conversationId, 
             />
             
             <div className="flex-1 overflow-y-auto max-h-56 custom-scrollbar bg-slate-50 border border-slate-100 rounded-xl p-2 space-y-1">
-              {friends.length === 0 ? (
-                <div className="text-center text-sm text-slate-400 p-4">Bạn chưa có người bạn nào.</div>
-              ) : (
-                friends.filter(f => f.fullName.toLowerCase().includes(searchFriend.toLowerCase())).map(friend => {
+              {isLoading ? (
+                <div className="space-y-2 p-1">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-lg animate-pulse bg-white border border-transparent">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-200" />
+                        <div className="h-3 bg-slate-200 rounded w-24" />
+                      </div>
+                      <div className="w-5 h-5 rounded-full bg-slate-200" />
+                    </div>
+                  ))}
+                </div>
+              ) : (() => {
+                const availableFriends = friends.filter(f => !existingUserIds.has(f._id));
+                const searchedFriends = availableFriends.filter(f => 
+                  f.fullName.toLowerCase().includes(searchFriend.toLowerCase())
+                );
+
+                if (availableFriends.length === 0) {
+                  return <div className="text-center text-sm text-slate-400 p-4">Tất cả bạn bè đã tham gia nhóm.</div>;
+                }
+                
+                if (searchedFriends.length === 0) {
+                  return <div className="text-center text-sm text-slate-400 p-4">Không tìm thấy bạn bè phù hợp.</div>;
+                }
+
+                return searchedFriends.map(friend => {
                   const isSelected = selectedUser?._id === friend._id;
                   return (
                     <div 
@@ -111,8 +149,8 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ conversationId, 
                       </div>
                     </div>
                   );
-                })
-              )}
+                });
+              })()}
             </div>
           </div>
         </div>

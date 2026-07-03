@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { pollApi, mapPoll } from '../../api/group.api';
 import type { Poll } from '../../types/group.type';
 import { useAuthStore } from '../../store/auth.store';
+import { useToastStore } from '../../store/toast.store';
 
 interface PollMessageItemProps {
   pollId: string;
@@ -39,7 +40,7 @@ export const PollMessageItem: React.FC<PollMessageItemProps> = ({ pollId, conver
       await pollApi.votePoll(pollId, optionId.toString());
       fetchPoll(); // Reload để lấy số vote mới
     } catch (err: any) {
-      alert(err.response?.data?.message || 'Không thể bình chọn');
+      useToastStore.getState().error(err.response?.data?.message || 'Không thể bình chọn');
     }
   };
 

@@ -13,6 +13,7 @@ interface CreateGroupModalProps {
 export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onSuccess }) => {
   const [groupName, setGroupName] = useState('');
   const [friends, setFriends] = useState<User[]>([]);
+  const [isLoadingFriends, setIsLoadingFriends] = useState(true);
   const [searchFriend, setSearchFriend] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
   const [isCreating, setIsCreating] = useState(false);
@@ -20,11 +21,14 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
 
   useEffect(() => {
     const fetchFriends = async () => {
+      setIsLoadingFriends(true);
       try {
         const data = await friendApi.getFriends();
         setFriends(data);
       } catch (e) {
         console.error(e);
+      } finally {
+        setIsLoadingFriends(false);
       }
     };
     fetchFriends();
@@ -101,7 +105,19 @@ export const CreateGroupModal: React.FC<CreateGroupModalProps> = ({ onClose, onS
             />
             
             <div className="flex-1 overflow-y-auto max-h-48 custom-scrollbar bg-slate-50 border border-slate-100 rounded-xl p-2 space-y-1">
-              {friends.length === 0 ? (
+              {isLoadingFriends ? (
+                <div className="space-y-2 p-1">
+                  {[...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center justify-between p-2 rounded-lg animate-pulse bg-white border border-transparent">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-slate-200" />
+                        <div className="h-3 bg-slate-200 rounded w-24" />
+                      </div>
+                      <div className="w-5 h-5 rounded-full bg-slate-200" />
+                    </div>
+                  ))}
+                </div>
+              ) : friends.length === 0 ? (
                 <div className="text-center text-sm text-slate-400 p-4">Bạn chưa có người bạn nào.</div>
               ) : (
                 friends.filter(f => f.fullName.toLowerCase().includes(searchFriend.toLowerCase())).map(friend => {

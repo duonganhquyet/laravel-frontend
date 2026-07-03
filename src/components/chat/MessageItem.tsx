@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import type { Message } from '../../types/message.type';
 import { PollMessageItem } from './PollMessageItem';
+import { useConfirmStore } from '../../store/confirm.store';
 import { NoteMessageItem } from './NoteMessageItem';
 import { messageApi } from '../../api/message.api';
 import { ChatAvatar } from '../ChatAvatar';
@@ -58,7 +59,12 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conve
   }
 
   const handleRecall = async () => {
-    if (window.confirm('Bạn có chắc chắn muốn thu hồi tin nhắn này?')) {
+    const confirmed = await useConfirmStore.getState().show({
+      title: 'Thu hồi tin nhắn',
+      message: 'Bạn có chắc chắn muốn thu hồi tin nhắn này?',
+      confirmText: 'Thu hồi',
+    });
+    if (confirmed) {
       try {
         await messageApi.recallMessage(message._id);
         setShowMenu(false);
@@ -82,6 +88,9 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conve
   };
 
   const isDeleted = message.isDeletedForAll;
+  const isEdited = !isDeleted && message.messageType === 'text' && 
+    message.updatedAt && message.createdAt && 
+    (new Date(message.updatedAt).getTime() - new Date(message.createdAt).getTime() > 1000);
 
   return (
     <div className={`flex w-full mb-6 group animate-fade-in-up ${isMine ? 'justify-end' : 'justify-start'}`}>
@@ -100,8 +109,13 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conve
       )}
 
       <div className={`relative max-w-[75%] sm:max-w-[65%] flex flex-col ${isMine ? 'items-end' : 'items-start'}`}>
-        <span className={`text-[11px] text-slate-500 mb-1.5 px-1 font-semibold ${isMine ? 'text-right' : 'text-left'}`}>
-          {message.sender?.fullName || 'Người dùng'}
+        <span className={`text-[11px] text-slate-500 mb-1.5 px-1 font-semibold flex items-center gap-1.5 ${isMine ? 'flex-row-reverse text-right' : 'text-left'}`}>
+          <span>{message.sender?.fullName || 'Người dùng'}</span>
+          {isEdited && (
+            <span className="text-[10px] text-slate-400 font-normal italic select-none" title="Tin nhắn đã chỉnh sửa">
+              (đã chỉnh sửa)
+            </span>
+          )}
         </span>
 
         <div className="relative flex items-center group/menu">

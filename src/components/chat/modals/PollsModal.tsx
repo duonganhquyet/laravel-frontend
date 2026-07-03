@@ -3,6 +3,7 @@ import { AxiosError } from 'axios';
 import { pollApi, mapPoll } from '../../../api/group.api';
 import type { Poll } from '../../../types/group.type';
 import { useAuthStore } from '../../../store/auth.store';
+import { useToastStore } from '../../../store/toast.store';
 
 interface PollsModalProps {
   conversationId: string;
@@ -71,7 +72,7 @@ export const PollsModal: React.FC<PollsModalProps> = ({ conversationId, onClose 
       fetchPolls(); // Reload để lấy số vote mới
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
-        alert(err.response?.data?.message || 'Không thể bình chọn');
+        useToastStore.getState().error(err.response?.data?.message || 'Không thể bình chọn');
       }
     }
   };

@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { initEcho, getEcho } from '../lib/socket';
+import { initEcho, getEcho, disconnectEcho } from '../lib/socket';
 import { useAuthStore } from '../store/auth.store';
+import { useOnlineStore } from '../store/online.store';
 import type { Message } from '../types/message.type';
 import type { BackendMessage } from '../lib/messageMapper';
 import Echo from 'laravel-echo';
@@ -31,21 +32,39 @@ export const useSocket = (activeConversationId?: string): UseSocketReturn => {
   const echoRef = useRef<Echo | null>(null);
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      disconnectEcho();
+      setEcho(null);
+      return;
+    }
 
     const token = localStorage.getItem('token');
     const instance = initEcho(token);
-    echoRef.current = instance;
     setEcho(instance);
+  }, [user]);
+
+  useEffect(() => {
+    if (!echo || !user) return;
+
+    const presenceChannel = echo.join('online');
+    
+    presenceChannel.here((users: any[]) => {
+      const ids = users.map(u => String(u.id));
+      useOnlineStore.getState().setOnlineUserIds(ids);
+    });
+
+    presenceChannel.joining((u: any) => {
+      useOnlineStore.getState().addOnlineUserId(String(u.id));
+    });
+
+    presenceChannel.leaving((u: any) => {
+      useOnlineStore.getState().removeOnlineUserId(String(u.id));
+    });
 
     return () => {
-      if (instance) {
-        instance.disconnect();
-      }
-      echoRef.current = null;
-      setEcho(null);
+      echo.leave('online');
     };
-  }, [user]);
+  }, [echo, user]);
 
   useEffect(() => {
     if (!echo || !activeConversationId) return;
@@ -152,7 +171,7 @@ export const useSocket = (activeConversationId?: string): UseSocketReturn => {
   const onEvent = useCallback((eventName: string, callback: (...args: any[]) => void) => {
     if (!echo || !user) return () => {};
     
-    const channel = echo.private(`user.${user.id}`);
+    const channel = echo.private(`user.${user._id}`);
     channel.listen(`.${eventName}`, (payload: any) => {
       callback(payload);
     });

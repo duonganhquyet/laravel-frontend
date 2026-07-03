@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { AxiosError } from 'axios';
 import { Sidebar } from '../../components/chat/Sidebar';
 import { ChatWindow } from '../../components/chat/ChatWindow';
 import { ChatHeader } from '../../components/chat/ChatHeader';
-import type { Conversation } from '../../types/conversation.type';
-import { conversationApi } from '../../api/conversation.api';
+import type { Conversation, ConversationParticipant } from '../../types/conversation.type';
+import { conversationApi, participantApi } from '../../api/conversation.api';
+import { friendApi } from '../../api/friend.api';
 import { AddMemberModal } from '../../components/chat/modals/AddMemberModal';
 import { GroupMembersModal } from '../../components/chat/modals/GroupMembersModal';
 import { NotesModal } from '../../components/chat/modals/NotesModal';
@@ -15,6 +16,7 @@ import { MessageSearch } from '../../components/chat/MessageSearch';
 import type { User } from '../../types/user.type';
 import { mapBackendConversations } from '../../lib/conversationMapper';
 import { useSocket } from '../../hooks/useSocket';
+import { useToastStore } from '../../store/toast.store';
 
 interface ToastNotification {
   id: string;
@@ -58,7 +60,31 @@ export const ChatPage: React.FC = () => {
   const [activeConversationId, setActiveConversationId] = useState<string | undefined>();
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [participants, setParticipants] = useState<ConversationParticipant[]>([]);
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
+
+  // Lifted Sidebar States
+  const [friends, setFriends] = useState<User[]>([]);
+  const [requestsCount, setRequestsCount] = useState(0);
+  const [isLoadingSidebar, setIsLoadingSidebar] = useState(true);
+
+  const fetchParticipants = async (id: string) => {
+    try {
+      const res = await participantApi.getParticipants(id);
+      const data = (res.data as any).data || res.data || [];
+      setParticipants(data);
+    } catch (e) {
+      console.error('Failed to fetch participants', e);
+    }
+  };
+
+  useEffect(() => {
+    if (activeConversationId) {
+      fetchParticipants(activeConversationId);
+    } else {
+      setParticipants([]);
+    }
+  }, [activeConversationId]);
 
   const { onEvent } = useSocket();
 
@@ -127,12 +153,20 @@ export const ChatPage: React.FC = () => {
   const [selectedStranger, setSelectedStranger] = useState<User | null>(null);
   const [strangerChatUser, setStrangerChatUser] = useState<User | null>(null);
 
-  const loadConversations = async () => {
+  const fetchConversations = useCallback(async (showLoading = false) => {
+    if (showLoading) setIsLoadingSidebar(true);
     try {
       const res = await conversationApi.getConversations();
       const rawData = (res.data as any).data || res.data || [];
       const convs = mapBackendConversations(rawData);
       setConversations(convs);
+
+      if (activeConversationId) {
+        const fresh = convs.find(c => c.conversationId === activeConversationId);
+        if (fresh) {
+          setActiveConversation(fresh);
+        }
+      }
       return convs;
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
@@ -140,26 +174,67 @@ export const ChatPage: React.FC = () => {
         console.error('Lỗi khi tải danh sách cuộc trò chuyện:', message);
       }
       return [] as Conversation[];
+    } finally {
+      if (showLoading) setIsLoadingSidebar(false);
     }
-  };
+  }, [activeConversationId]);
 
-  useEffect(() => {
-    loadConversations();
+  const fetchFriendRequests = useCallback(async () => {
+    try {
+      const reqs = await friendApi.getFriendRequests();
+      setRequestsCount(reqs.length);
+      const friendList = await friendApi.getFriends();
+      setFriends(friendList);
+    } catch (e) {
+      console.error('Lỗi tải danh sách bạn bè:', e);
+    }
   }, []);
 
-  const handleSelectConversation = async (id: string) => {
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setIsLoadingSidebar(true);
+      await Promise.all([
+        fetchConversations(false),
+        fetchFriendRequests()
+      ]);
+      setIsLoadingSidebar(false);
+    };
+    loadInitialData();
+  }, []);
+
+  const handleSelectConversation = async (id: string, strangerFallbackUser?: User | null) => {
     setActiveConversationId(id);
     setSelectedStranger(null);
-    setStrangerChatUser(null);
+    setStrangerChatUser(strangerFallbackUser || null);
 
     let currentConversation = conversations.find((c) => c.conversationId === id);
     if (!currentConversation) {
-      const convs = await loadConversations();
+      const convs = await fetchConversations(false);
       currentConversation = convs.find((c) => c.conversationId === id);
     }
 
-    setActiveConversation(currentConversation || null);
+    if (currentConversation) {
+      setActiveConversation(currentConversation);
+      setStrangerChatUser(null);
+    } else {
+      setActiveConversation(null);
+    }
   };
+
+  const handleViewUserProfile = useCallback(async (userId: string) => {
+    try {
+      const res = await import('../../api/user.api').then(m => m.userApi.getUserById(userId));
+      const fetchedUser = (res.data as any).data ?? res.data;
+      if (fetchedUser) {
+        setSelectedStranger(fetchedUser);
+        setStrangerChatUser(null);
+        setActiveConversationId(undefined);
+        setActiveConversation(null);
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
 
   return (
     <div className="flex h-screen overflow-hidden font-sans bg-slate-50">
@@ -172,101 +247,117 @@ export const ChatPage: React.FC = () => {
           setActiveConversationId(undefined); // Tắt chat hiện tại
           setActiveConversation(null);
         }}
+        conversations={conversations}
+        friends={friends}
+        requestsCount={requestsCount}
+        isLoading={isLoadingSidebar}
+        fetchConversations={fetchConversations}
+        fetchFriendRequests={fetchFriendRequests}
       />
 
       <div className="flex-1 flex flex-col relative bg-transparent">
-        <ChatHeader
-          conversation={activeConversation}
-          strangerUser={selectedStranger || strangerChatUser}
-          onOpenAddMember={() => setIsAddMemberOpen(true)}
-          onOpenGroupMembers={() => setIsGroupMembersOpen(true)}
-          onOpenNotes={() => setIsNotesOpen(true)}
-          onOpenPolls={() => setIsPollsOpen(true)}
-          onToggleSearch={() => setIsSearchOpen(!isSearchOpen)}
-          onToggleInfo={() => setIsInfoOpen(!isInfoOpen)}
-          isSearchOpen={isSearchOpen}
-          isInfoOpen={isInfoOpen}
-        />
-
-        {isSearchOpen && activeConversationId && (
-          <div className="absolute top-16 right-0 z-30 mr-4 mt-2">
-            <MessageSearch conversationId={activeConversationId} onClose={() => setIsSearchOpen(false)} />
-          </div>
-        )}
-
-        {selectedStranger ? (
-          <UserProfileView
-            user={selectedStranger}
-            onClose={() => setSelectedStranger(null)}
-            onStartChat={(convId) => {
-              setStrangerChatUser(selectedStranger);
-              setSelectedStranger(null);
-              setActiveConversationId(convId);
-            }}
-          />
-        ) : activeConversationId ? (
-          <div className="flex-1 overflow-hidden relative flex">
-            <div className="flex-1 relative">
-              <ChatWindow 
-                conversation={activeConversation} 
-                conversationId={activeConversationId} 
-                onAvatarClick={async (userId) => {
-                  try {
-                    const res = await import('../../api/user.api').then(m => m.userApi.getUserById(userId));
-                    const fetchedUser = (res.data as any).data ?? res.data;
-                    if (fetchedUser) {
-                      setSelectedStranger(fetchedUser);
-                      setStrangerChatUser(null);
-                      setActiveConversationId(undefined);
-                      setActiveConversation(null);
-                    }
-                  } catch (e) {
-                    console.error(e);
-                  }
-                }}
+        {(() => {
+          const isGroupClosed = !!(activeConversation?.isGroupChat && participants.length > 0 && participants.length < 3);
+          return (
+            <>
+              <ChatHeader
+                conversation={activeConversation}
+                strangerUser={selectedStranger || strangerChatUser}
+                onOpenAddMember={() => setIsAddMemberOpen(true)}
+                onOpenGroupMembers={() => setIsGroupMembersOpen(true)}
+                onOpenNotes={() => setIsNotesOpen(true)}
+                onOpenPolls={() => setIsPollsOpen(true)}
+                onToggleSearch={() => setIsSearchOpen(!isSearchOpen)}
+                onToggleInfo={() => setIsInfoOpen(!isInfoOpen)}
+                isSearchOpen={isSearchOpen}
+                isInfoOpen={isInfoOpen}
+                isClosed={isGroupClosed}
+                onAvatarClick={handleViewUserProfile}
               />
-            </div>
-            {isInfoOpen && (
-              <ChatInfoDrawer conversationId={activeConversationId} onClose={() => setIsInfoOpen(false)} />
-            )}
-          </div>
-        ) : (
-          <div className="flex-1 flex flex-col items-center justify-center relative bg-white">
-            <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
-              <svg className="w-10 h-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-            </div>
-            <h2 className="text-2xl font-bold text-slate-800 mb-2 tracking-tight">Chào mừng bạn trở lại</h2>
-            <p className="text-slate-500 font-medium">Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
-          </div>
-        )}
 
-        {/* Modals */}
-        {isAddMemberOpen && activeConversationId && (
-          <AddMemberModal
-            conversationId={activeConversationId}
-            onClose={() => setIsAddMemberOpen(false)}
-          />
-        )}
-        {isGroupMembersOpen && activeConversation && (
-          <GroupMembersModal
-            conversation={activeConversation}
-            onClose={() => setIsGroupMembersOpen(false)}
-          />
-        )}
-        {isNotesOpen && activeConversationId && (
-          <NotesModal
-            conversationId={activeConversationId}
-            onClose={() => setIsNotesOpen(false)}
-          />
-        )}
-        {isPollsOpen && activeConversationId && (
-          <PollsModal
-            conversationId={activeConversationId}
-            onClose={() => setIsPollsOpen(false)}
-          />
-        )}
+              {isSearchOpen && activeConversationId && !isGroupClosed && (
+                <div className="absolute top-16 right-0 z-30 mr-4 mt-2">
+                  <MessageSearch conversationId={activeConversationId} onClose={() => setIsSearchOpen(false)} />
+                </div>
+              )}
+
+              {selectedStranger ? (
+                <UserProfileView
+                  user={selectedStranger}
+                  onClose={() => setSelectedStranger(null)}
+                  onStartChat={(convId) => {
+                    const stranger = selectedStranger;
+                    handleSelectConversation(convId, stranger);
+                  }}
+                  friends={friends}
+                />
+              ) : activeConversationId ? (
+                <div className="flex-1 overflow-hidden relative flex">
+                  <div className="flex-1 relative">
+                    <ChatWindow 
+                      conversation={activeConversation} 
+                      conversationId={activeConversationId} 
+                      participants={participants}
+                      onRefreshParticipants={() => { fetchParticipants(activeConversationId); fetchConversations(false); }}
+                      onAvatarClick={handleViewUserProfile}
+                      onCloseChat={() => {
+                        setActiveConversationId(undefined);
+                        setActiveConversation(null);
+                        fetchConversations(false);
+                        useToastStore.getState().info('Nhóm chat đã bị giải tán bởi trưởng nhóm!');
+                      }}
+                    />
+                  </div>
+                  {isInfoOpen && !isGroupClosed && (
+                    <ChatInfoDrawer conversationId={activeConversationId} onClose={() => setIsInfoOpen(false)} />
+                  )}
+                </div>
+              ) : (
+                <div className="flex-1 flex flex-col items-center justify-center relative bg-white">
+                  <div className="w-20 h-20 bg-slate-50 border border-slate-100 rounded-2xl flex items-center justify-center mb-6 shadow-sm">
+                    <svg className="w-10 h-10 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-800 mb-2 tracking-tight">Chào mừng bạn trở lại</h2>
+                  <p className="text-slate-500 font-medium">Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
+                </div>
+              )}
+
+              {/* Modals */}
+              {isAddMemberOpen && activeConversationId && (
+                <AddMemberModal
+                  conversationId={activeConversationId}
+                  onClose={() => setIsAddMemberOpen(false)}
+                  onRefresh={() => { fetchParticipants(activeConversationId); fetchConversations(false); }}
+                />
+              )}
+              {isGroupMembersOpen && activeConversation && (
+                <GroupMembersModal
+                  conversation={activeConversation}
+                  onClose={() => setIsGroupMembersOpen(false)}
+                  onRefresh={() => { fetchParticipants(activeConversation._id); fetchConversations(false); }}
+                  onLeaveGroup={() => {
+                    setActiveConversationId(undefined);
+                    setActiveConversation(null);
+                  }}
+                />
+              )}
+              {isNotesOpen && activeConversationId && (
+                <NotesModal
+                  conversationId={activeConversationId}
+                  onClose={() => setIsNotesOpen(false)}
+                />
+              )}
+              {isPollsOpen && activeConversationId && (
+                <PollsModal
+                  conversationId={activeConversationId}
+                  onClose={() => setIsPollsOpen(false)}
+                />
+              )}
+            </>
+          );
+        })()}
       </div>
 
       {/* Toast notifications container */}

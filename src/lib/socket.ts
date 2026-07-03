@@ -7,7 +7,7 @@ let echoInstance: Echo | null = null;
 
 export const initEcho = (token: string | null) => {
   if (echoInstance) {
-    echoInstance.disconnect();
+    return echoInstance;
   }
 
   echoInstance = new Echo({
@@ -26,6 +26,13 @@ export const initEcho = (token: string | null) => {
   });
 
   return echoInstance;
+};
+
+export const disconnectEcho = () => {
+  if (echoInstance) {
+    echoInstance.disconnect();
+    echoInstance = null;
+  }
 };
 
 export const getEcho = () => echoInstance;

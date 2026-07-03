@@ -4,6 +4,7 @@ import { AxiosError } from 'axios';
 import { authApi } from '../../api/auth.api';
 import { useAuthStore } from '../../store/auth.store'; 
 import type { User } from '../../types/user.type';
+import { useToastStore } from '../../store/toast.store';
 
 interface AuthResponse {
   user: User;
@@ -33,14 +34,16 @@ export const LoginPage: React.FC = () => {
       const { user, accessToken } = response.data as unknown as AuthResponse; 
       
       setAuth(user, accessToken);
+      useToastStore.getState().success('Đăng nhập thành công! Chào mừng bạn quay trở lại.');
       navigate("/");
 
     } catch (err: unknown) {
+      let errMsg = 'Đăng nhập thất bại. Vui lòng kiểm tra lại.';
       if (err instanceof AxiosError) {
-        setError(err.response?.data?.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.');
-      } else {
-        setError('Đã xảy ra lỗi không xác định. Vui lòng thử lại sau.');
+        errMsg = err.response?.data?.message || errMsg;
       }
+      setError(errMsg);
+      useToastStore.getState().error(errMsg);
     } finally {
       setIsLoading(false);
     }

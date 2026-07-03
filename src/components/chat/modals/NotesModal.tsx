@@ -3,6 +3,8 @@ import { AxiosError } from 'axios';
 import { noteApi, mapNote } from '../../../api/group.api';
 import type { GroupNote } from '../../../types/group.type';
 import { useAuthStore } from '../../../store/auth.store';
+import { useConfirmStore } from '../../../store/confirm.store';
+import { useToastStore } from '../../../store/toast.store';
 
 interface NotesModalProps {
   conversationId: string;
@@ -55,13 +57,19 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
   };
 
   const handleDeleteNote = async (noteId: string | number) => {
-    if (!window.confirm('Bạn có chắc muốn xóa ghi chú này?')) return;
+    const confirmed = await useConfirmStore.getState().show({
+      title: 'Xóa ghi chú',
+      message: 'Bạn có chắc muốn xóa ghi chú này?',
+      confirmText: 'Xóa',
+    });
+    if (!confirmed) return;
     try {
       await noteApi.deleteNote(noteId.toString());
       setNotes(notes.filter(n => n.id.toString() !== noteId.toString()));
+      useToastStore.getState().success('Đã xóa ghi chú thành công');
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
-        alert(err.response?.data?.message || 'Không thể xóa ghi chú');
+        useToastStore.getState().error(err.response?.data?.message || 'Không thể xóa ghi chú');
       }
     }
   };
@@ -101,8 +109,15 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
               {notes.map(note => (
                 <div key={note.id} className="bg-white p-4 rounded-xl shadow-sm border border-slate-100 group">
                   <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md">
-                      Người dùng #{note.createdByUserId}
+                    <span className="text-xs font-semibold text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md flex items-center gap-1.5">
+                      {note.creatorAvatar && (
+                        <img 
+                          src={note.creatorAvatar} 
+                          alt={note.creatorName || "avatar"} 
+                          className="w-4.5 h-4.5 rounded-full object-cover shrink-0" 
+                        />
+                      )}
+                      {note.creatorName || `Người dùng #${note.createdByUserId}`}
                     </span>
                     {user && (user._id === note.createdByUserId.toString() || user.id === note.createdByUserId) && (
                       <button 

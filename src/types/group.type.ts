@@ -22,4 +22,6 @@ export interface GroupNote {
   createdByUserId: string | number;
   createdAt: string;
   updatedAt: string;
+  creatorName?: string;
+  creatorAvatar?: string | null;
 }

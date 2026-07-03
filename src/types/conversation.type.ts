@@ -7,7 +7,8 @@ export interface Conversation {
   conversationId: string;        // Primary identifier used throughout the app
   chatName: string;
   isGroupChat: boolean;
-  groupAdmins: string[];          // List of user IDs who are admins
+  groupAdmins: string[];          // List of user IDs who are admins (is_admin=true)
+  creatorId?: string | null;      // The creator/owner (ADMIN rank)
   users: User[];
   latestMessage?: LatestMessage | null;
   otherUserId?: string | null;
@@ -29,5 +30,5 @@ export interface ConversationParticipant {
   fullName: string;
   email: string;
   avatar: string | null;
-  role: 'admin' | 'member';
+  role: 'creator' | 'admin' | 'member';
 }

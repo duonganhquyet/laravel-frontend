@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import { authApi } from '../../api/auth.api';
+import { useToastStore } from '../../store/toast.store';
 
 export const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,6 +16,7 @@ export const RegisterPage: React.FC = () => {
   const handleSendOtp = async () => {
     if (!formData.email) {
       setError('Vui lòng nhập email trước!');
+      useToastStore.getState().warning('Vui lòng nhập email trước!');
       return;
     }
     setError('');
@@ -22,13 +24,14 @@ export const RegisterPage: React.FC = () => {
     try {
       await authApi.sendOtp({ email: formData.email });
       setIsOtpSent(true);
-      alert('Mã OTP đã được gửi đến email của bạn!');
+      useToastStore.getState().success('Mã OTP đã được gửi đến email của bạn!');
     } catch (err: unknown) {
+      let errMsg = 'Lỗi khi gửi OTP';
       if (err instanceof AxiosError) {
-        setError(err.response?.data?.message || 'Lỗi khi gửi OTP');
-      } else {
-        setError('Lỗi không xác định khi gửi OTP');
+        errMsg = err.response?.data?.message || errMsg;
       }
+      setError(errMsg);
+      useToastStore.getState().error(errMsg);
     } finally {
       setIsLoading(false);
     }
@@ -40,20 +43,22 @@ export const RegisterPage: React.FC = () => {
 
     if (formData.password !== formData.confirmPassword) {
       setError('Mật khẩu xác nhận không khớp!');
+      useToastStore.getState().warning('Mật khẩu xác nhận không khớp!');
       return;
     }
 
     setIsLoading(true);
     try {
       await authApi.register(formData);
-      alert('Đăng ký thành công!');
+      useToastStore.getState().success('Đăng ký tài khoản thành công!');
       navigate('/login');
     } catch (err: unknown) {
+      let errMsg = 'Đăng ký thất bại!';
       if (err instanceof AxiosError) {
-        setError(err.response?.data?.message || 'Đăng ký thất bại!');
-      } else {
-        setError('Lỗi không xác định khi đăng ký.');
+        errMsg = err.response?.data?.message || errMsg;
       }
+      setError(errMsg);
+      useToastStore.getState().error(errMsg);
     } finally {
       setIsLoading(false);
     }

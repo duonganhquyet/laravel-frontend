@@ -149,6 +149,7 @@ export const ChatPage: React.FC = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isInfoOpen, setIsInfoOpen] = useState(false);
 
+
   // Stranger Profile state
   const [selectedStranger, setSelectedStranger] = useState<User | null>(null);
   const [strangerChatUser, setStrangerChatUser] = useState<User | null>(null);

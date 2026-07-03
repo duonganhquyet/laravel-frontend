@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
-import { notification } from 'antd';
 import { AxiosError } from 'axios';
 import { authApi } from '../../api/auth.api';
+import { useToastStore } from '../../store/toast.store';
 
 interface ForgotPasswordModalProps {
   isOpen: boolean;
@@ -28,19 +28,13 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
     try {
       await authApi.forgotPassword({ email });
       setStep(2);
-      notification.success({
-        message: 'Gửi yêu cầu thành công',
-        description: 'Vui lòng kiểm tra email của bạn để lấy mã OTP.',
-      });
+      useToastStore.getState().success('Gửi yêu cầu thành công! Vui lòng kiểm tra email của bạn để lấy mã OTP.');
     } catch (err: unknown) {
       let errorMessage = 'Đã xảy ra lỗi không xác định.';
       if (err instanceof AxiosError) {
         errorMessage = err.response?.data?.message || 'Lỗi khi gửi yêu cầu khôi phục mật khẩu.';
       }
-      notification.error({
-        message: 'Lỗi',
-        description: errorMessage,
-      });
+      useToastStore.getState().error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -51,30 +45,21 @@ export const ForgotPasswordModal: React.FC<ForgotPasswordModalProps> = ({ isOpen
     if (!otp || !password || !confirmPassword) return;
 
     if (password !== confirmPassword) {
-      notification.error({
-        message: 'Lỗi',
-        description: 'Mật khẩu xác nhận không khớp.',
-      });
+      useToastStore.getState().error('Mật khẩu xác nhận không khớp.');
       return;
     }
 
     setIsLoading(true);
     try {
       await authApi.resetPassword(otp, { password, confirmPassword });
-      notification.success({
-        message: 'Đổi mật khẩu thành công',
-        description: 'Bạn có thể đăng nhập bằng mật khẩu mới.',
-      });
+      useToastStore.getState().success('Đổi mật khẩu thành công! Bạn có thể đăng nhập bằng mật khẩu mới.');
       handleClose();
     } catch (err: unknown) {
       let errorMessage = 'Đã xảy ra lỗi không xác định.';
       if (err instanceof AxiosError) {
         errorMessage = err.response?.data?.message || 'Lỗi khi đặt lại mật khẩu.';
       }
-      notification.error({
-        message: 'Lỗi',
-        description: errorMessage,
-      });
+      useToastStore.getState().error(errorMessage);
     } finally {
       setIsLoading(false);
     }

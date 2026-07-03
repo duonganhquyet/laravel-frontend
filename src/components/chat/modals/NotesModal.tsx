@@ -47,6 +47,7 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
       await noteApi.createNote(conversationId, newNote);
       setNewNote('');
       fetchNotes();
+      window.dispatchEvent(new CustomEvent('notes-updated', { detail: { conversationId } }));
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
         setError(err.response?.data?.message || 'Không thể tạo ghi chú');
@@ -67,6 +68,7 @@ export const NotesModal: React.FC<NotesModalProps> = ({ conversationId, onClose 
       await noteApi.deleteNote(noteId.toString());
       setNotes(notes.filter(n => n.id.toString() !== noteId.toString()));
       useToastStore.getState().success('Đã xóa ghi chú thành công');
+      window.dispatchEvent(new CustomEvent('notes-updated', { detail: { conversationId } }));
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
         useToastStore.getState().error(err.response?.data?.message || 'Không thể xóa ghi chú');

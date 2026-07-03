@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import type { Message } from '../../types/message.type';
 import { PollMessageItem } from './PollMessageItem';
 import { useConfirmStore } from '../../store/confirm.store';
@@ -6,6 +6,120 @@ import { NoteMessageItem } from './NoteMessageItem';
 import { messageApi } from '../../api/message.api';
 import { ChatAvatar } from '../ChatAvatar';
 import { MediaPreviewModal } from './MediaPreviewModal';
+
+interface AudioMessagePlayerProps {
+  fileUrl: string;
+  isMine: boolean;
+}
+
+const AudioMessagePlayer: React.FC<AudioMessagePlayerProps> = ({ fileUrl, isMine }) => {
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [duration, setDuration] = useState(0);
+  const [currentTime, setCurrentTime] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  const togglePlay = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!audioRef.current) return;
+    if (isPlaying) {
+      audioRef.current.pause();
+      setIsPlaying(false);
+    } else {
+      audioRef.current.play().catch(err => console.error("Error playing audio:", err));
+      setIsPlaying(true);
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setCurrentTime(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setDuration(audioRef.current.duration);
+    }
+  };
+
+  const handleAudioEnded = () => {
+    setIsPlaying(false);
+    setCurrentTime(0);
+  };
+
+  const handleProgressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseFloat(e.target.value);
+    setCurrentTime(value);
+    if (audioRef.current) {
+      audioRef.current.currentTime = value;
+    }
+  };
+
+  const formatTime = (time: number) => {
+    if (isNaN(time)) return '0:00';
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  return (
+    <div className="flex items-center gap-3.5 py-1 px-1 min-w-[240px] select-none" onClick={(e) => e.stopPropagation()}>
+      <audio 
+        ref={audioRef} 
+        src={fileUrl} 
+        onTimeUpdate={handleTimeUpdate}
+        onLoadedMetadata={handleLoadedMetadata}
+        onEnded={handleAudioEnded}
+        preload="metadata"
+      />
+      
+      <button 
+        onClick={togglePlay}
+        className={`w-9 h-9 rounded-full flex items-center justify-center shrink-0 shadow-md transition-all active:scale-95 ${
+          isMine 
+            ? 'bg-white text-indigo-600 hover:bg-slate-100' 
+            : 'bg-indigo-600 text-white hover:bg-indigo-700'
+        }`}
+      >
+        {isPlaying ? (
+          <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>
+        ) : (
+          <svg className="w-4 h-4 fill-current ml-0.5" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+        )}
+      </button>
+
+      <div className="flex-1 flex flex-col gap-1">
+        <input 
+          type="range" 
+          min={0}
+          max={duration || 100}
+          value={currentTime}
+          onChange={handleProgressChange}
+          className={`w-full h-1 rounded-lg appearance-none cursor-pointer outline-none transition-all ${
+            isMine 
+              ? 'bg-white/30 accent-white' 
+              : 'bg-slate-200 accent-indigo-600'
+          }`}
+        />
+        <div className={`flex justify-between text-[10px] font-medium ${
+          isMine ? 'text-white/80' : 'text-slate-400'
+        }`}>
+          <span>{formatTime(currentTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const isAudioMessage = (message: Message) => {
+  if (!message.fileUrl) return false;
+  if (message.mimeType?.startsWith('audio/')) return true;
+  if (message.fileName === 'voice-message.webm') return true;
+  const audioExtensions = ['.mp3', '.wav', '.ogg', '.m4a', '.wma', '.aac', '.amr'];
+  const name = message.fileName?.toLowerCase() || '';
+  return audioExtensions.some(ext => name.endsWith(ext));
+};
 
 interface MessageItemProps {
   message: Message;
@@ -167,8 +281,8 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conve
               : message.messageType === 'image' || message.messageType === 'video'
                 ? 'p-1 bg-transparent rounded-3xl'
                 : isMine
-                  ? 'p-3 px-4 bg-[#5b45ff] text-white rounded-[24px] rounded-br-sm'
-                  : 'p-3 px-4 bg-white border border-slate-100 text-slate-800 rounded-[24px] rounded-bl-sm'
+                  ? `${isAudioMessage(message) ? 'p-2 px-3' : 'p-3 px-4'} bg-[#5b45ff] text-white rounded-[24px] rounded-br-sm`
+                  : `${isAudioMessage(message) ? 'p-2 px-3' : 'p-3 px-4'} bg-white border border-slate-100 text-slate-800 rounded-[24px] rounded-bl-sm`
           }`}>
             {isDeleted ? (
               <div className="flex items-center gap-2 text-[14px]">
@@ -177,41 +291,47 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conve
               </div>
             ) : (
               <>
-                {message.messageType === 'image' && message.fileUrl && (
-                  <div 
-                    className="overflow-hidden rounded-2xl border border-black/5 shadow-sm cursor-pointer relative group/media"
-                    onClick={() => setPreviewMedia({ url: message.fileUrl!, type: 'image', name: message.fileName || 'image' })}
-                  >
-                    <img src={message.fileUrl} alt="Đính kèm" className="max-w-full h-auto object-cover max-h-[300px]" loading="lazy" />
-                  </div>
-                )}
-                {message.messageType === 'video' && message.fileUrl && (
-                  <div 
-                    className="overflow-hidden rounded-2xl border border-black/5 bg-black/10 shadow-sm relative group/media"
-                  >
-                    <video src={message.fileUrl} controls className="max-w-full h-auto max-h-[300px]" />
-                    <button
-                      onClick={() => setPreviewMedia({ url: message.fileUrl!, type: 'video', name: message.fileName || 'video' })}
-                      className="absolute top-2 left-2 p-1.5 bg-black/50 text-white rounded-full opacity-0 group-hover/media:opacity-100 transition-opacity hover:bg-black/70 z-10"
-                      title="Xem toàn màn hình"
-                    >
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
-                    </button>
-                  </div>
-                )}
-                {message.messageType === 'file' && message.fileUrl && (
-                  <div
-                    onClick={() => setPreviewMedia({ url: message.fileUrl!, type: 'file', name: message.fileName || 'file' })}
-                    className="flex items-center gap-3 cursor-pointer group min-w-[200px]"
-                  >
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isMine ? 'bg-white/20' : 'bg-indigo-50 text-indigo-500'}`}>
-                      <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
-                    </div>
-                    <div className="flex flex-col overflow-hidden max-w-[200px]">
-                      <span className={`truncate text-[14px] font-medium group-hover:underline ${isMine ? 'text-white' : 'text-slate-800'}`}>{message.fileName || 'Tải file đính kèm'}</span>
-                      {message.fileSize && <span className={`text-[11px] mt-0.5 ${isMine ? 'text-white/70' : 'text-slate-400'}`}>{(message.fileSize / 1024 / 1024).toFixed(2)} MB</span>}
-                    </div>
-                  </div>
+                {isAudioMessage(message) && message.fileUrl ? (
+                  <AudioMessagePlayer fileUrl={message.fileUrl} isMine={isMine} />
+                ) : (
+                  <>
+                    {message.messageType === 'image' && message.fileUrl && (
+                      <div 
+                        className="overflow-hidden rounded-2xl border border-black/5 shadow-sm cursor-pointer relative group/media"
+                        onClick={() => setPreviewMedia({ url: message.fileUrl!, type: 'image', name: message.fileName || 'image' })}
+                      >
+                        <img src={message.fileUrl} alt="Đính kèm" className="max-w-full h-auto object-cover max-h-[300px]" loading="lazy" />
+                      </div>
+                    )}
+                    {message.messageType === 'video' && message.fileUrl && (
+                      <div 
+                        className="overflow-hidden rounded-2xl border border-black/5 bg-black/10 shadow-sm relative group/media"
+                      >
+                        <video src={message.fileUrl} controls className="max-w-full h-auto max-h-[300px]" />
+                        <button
+                          onClick={() => setPreviewMedia({ url: message.fileUrl!, type: 'video', name: message.fileName || 'video' })}
+                          className="absolute top-2 left-2 p-1.5 bg-black/50 text-white rounded-full opacity-0 group-hover/media:opacity-100 transition-opacity hover:bg-black/70 z-10"
+                          title="Xem toàn màn hình"
+                        >
+                          <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4" /></svg>
+                        </button>
+                      </div>
+                    )}
+                    {message.messageType === 'file' && message.fileUrl && (
+                      <div
+                        onClick={() => setPreviewMedia({ url: message.fileUrl!, type: 'file', name: message.fileName || 'file' })}
+                        className="flex items-center gap-3 cursor-pointer group min-w-[200px]"
+                      >
+                        <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${isMine ? 'bg-white/20' : 'bg-indigo-50 text-indigo-500'}`}>
+                          <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" /></svg>
+                        </div>
+                        <div className="flex flex-col overflow-hidden max-w-[200px]">
+                          <span className={`truncate text-[14px] font-medium group-hover:underline ${isMine ? 'text-white' : 'text-slate-800'}`}>{message.fileName || 'Tải file đính kèm'}</span>
+                          {message.fileSize && <span className={`text-[11px] mt-0.5 ${isMine ? 'text-white/70' : 'text-slate-400'}`}>{(message.fileSize / 1024 / 1024).toFixed(2)} MB</span>}
+                        </div>
+                      </div>
+                    )}
+                  </>
                 )}
 
                 {isEditing ? (

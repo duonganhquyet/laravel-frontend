@@ -90,12 +90,17 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
 
   // Mark as read when messages load
   useEffect(() => {
-    if (messages.length > 0 && user?._id) {
-      const hasUnread = messages.some(msg =>
-        msg.sender?._id !== user._id && !msg.readBy?.some(r => r._id === user._id)
-      );
-      if (hasUnread) {
-        conversationApi.markAsRead(conversationId).catch(console.error);
+    if (messages.length > 0 && user) {
+      const currentUserId = user._id ?? (user.id ? String(user.id) : '');
+      if (currentUserId) {
+        const hasUnread = messages.some(msg => {
+          const senderId = msg.sender?._id;
+          return senderId && String(senderId) !== String(currentUserId) && 
+            !msg.readBy?.some(r => String(r._id) === String(currentUserId));
+        });
+        if (hasUnread) {
+          conversationApi.markAsRead(conversationId).catch(console.error);
+        }
       }
     }
   }, [messages, conversationId, user]);
@@ -110,8 +115,11 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
           return [...prev, mapped];
         });
 
-        // Refresh notes if system message about notes
-        if (mapped.messageType === 'system' && mapped.content?.toLowerCase().includes('ghi chú')) {
+        // Refresh notes if system message about notes or a new note is created
+        if (
+          (mapped.messageType === 'system' && mapped.content?.toLowerCase().includes('ghi chú')) ||
+          mapped.messageType === 'note'
+        ) {
           noteApi.getNotes(conversationId).then(res => {
             const notes = ((res.data as any).data || res.data || []).map(mapNote);
             setLatestNote(notes.length > 0 ? notes[0] : null);
@@ -122,11 +130,12 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
 
     const cleanupRead = onMessagesRead(({ conversationId: eventRoomId, userId }) => {
       if (eventRoomId === conversationId) {
-        const participant = participants.find(p => p._id === userId || p.id === userId);
-        const readerInfo = { _id: userId, fullName: participant?.fullName || '', avatar: participant?.avatar ?? null };
+        const participant = participants.find(p => String(p.userId) === String(userId));
+        const readerInfo = { _id: String(userId), fullName: participant?.fullName || '', avatar: participant?.avatar ?? null };
         setMessages(prev =>
           prev.map(msg => {
-            if (msg.sender?._id !== userId && !msg.readBy?.some(r => r._id === userId)) {
+            const senderId = msg.sender?._id;
+            if (senderId && String(senderId) !== String(userId) && !msg.readBy?.some(r => String(r._id) === String(userId))) {
               return { ...msg, readBy: [...(msg.readBy || []), readerInfo] };
             }
             return msg;
@@ -159,6 +168,26 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
 
     return () => { cleanup(); cleanupRead(); cleanupUpdated(); cleanupDeleted(); cleanupParticipants(); };
   }, [conversationId, onMessageReceived, onMessagesRead, onMessageUpdated, onMessageDeleted, onParticipantsUpdated, onRefreshParticipants, participants, onCloseChat]);
+
+  // Listen for local notes-updated custom event
+  useEffect(() => {
+    const handleNotesUpdated = (e: Event) => {
+      const customEvent = e as CustomEvent;
+      if (customEvent.detail?.conversationId === conversationId) {
+        noteApi.getNotes(conversationId).then(res => {
+          const notes = ((res.data as any).data || res.data || []).map(mapNote);
+          setLatestNote(notes.length > 0 ? notes[0] : null);
+        }).catch(err => {
+          console.error('Failed to fetch notes on notes-updated event', err);
+        });
+      }
+    };
+
+    window.addEventListener('notes-updated', handleNotesUpdated);
+    return () => {
+      window.removeEventListener('notes-updated', handleNotesUpdated);
+    };
+  }, [conversationId]);
 
   // Typing indicators
   useEffect(() => {
@@ -334,19 +363,25 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
           )}
 
           {(() => {
+            const currentUserId = user?._id ?? (user?.id ? String(user.id) : '');
+
             // Track latest read index per reader
             const latestReadIndices: Record<string, number> = {};
             messages.forEach((msg, index) => {
               msg.readBy?.forEach(reader => {
-                if (reader._id !== user?._id) {
-                  latestReadIndices[reader._id] = index;
+                const readerId = String(reader._id);
+                if (currentUserId && readerId !== String(currentUserId)) {
+                  latestReadIndices[readerId] = index;
                 }
               });
             });
 
             return messages.map((msg, index) => {
-              const isMine = msg.sender?._id === user?._id;
-              const readByUsers = msg.readBy?.filter(r => latestReadIndices[r._id] === index && r._id !== user?._id) || [];
+              const isMine = msg.sender?._id && currentUserId ? String(msg.sender._id) === String(currentUserId) : false;
+              const readByUsers = msg.readBy?.filter(r => {
+                const readerId = String(r._id);
+                return latestReadIndices[readerId] === index && currentUserId && readerId !== String(currentUserId);
+              }) || [];
 
               // Sync avatar with participant state
               const senderParticipant = participants.find(p => p.userId === msg.sender?._id);

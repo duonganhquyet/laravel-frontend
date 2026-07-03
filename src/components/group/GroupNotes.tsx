@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { AxiosError } from 'axios';
-import { noteApi } from '../../api/group.api';
+import { noteApi, mapNote } from '../../api/group.api';
 import type { GroupNote } from '../../types/group.type';
 
 interface GroupNotesProps {
-  conversationId: number;
+  conversationId: string;
 }
 
 export const GroupNotes: React.FC<GroupNotesProps> = ({ conversationId }) => {
@@ -15,7 +15,8 @@ export const GroupNotes: React.FC<GroupNotesProps> = ({ conversationId }) => {
     const fetchNotes = async () => {
       try {
         const res = await noteApi.getNotes(conversationId);
-        setNotes(res.data);
+        const rawNotes = (res.data as any).data || res.data || [];
+        setNotes(rawNotes.map(mapNote));
       } catch (err: unknown) {
         console.error(err instanceof AxiosError ? err.response?.data : err);
       }
@@ -27,8 +28,10 @@ export const GroupNotes: React.FC<GroupNotesProps> = ({ conversationId }) => {
     if (!newNote.trim()) return;
     try {
       const res = await noteApi.createNote(conversationId, newNote);
-      setNotes([res.data, ...notes]);
+      const mapped = mapNote((res.data as any).data || res.data);
+      setNotes([mapped, ...notes]);
       setNewNote('');
+      window.dispatchEvent(new CustomEvent('notes-updated', { detail: { conversationId } }));
     } catch (err: unknown) {
       if (err instanceof AxiosError) {
         alert(err.response?.data?.message || 'Lỗi khi thêm ghi chú.');
@@ -50,8 +53,8 @@ export const GroupNotes: React.FC<GroupNotesProps> = ({ conversationId }) => {
       </div>
       <ul className="space-y-2 text-sm">
         {notes.map(note => (
-          <li key={note.NoteId} className="bg-white p-2 rounded shadow-sm border border-yellow-100">
-            {note.Content}
+          <li key={note.id} className="bg-white p-2 rounded shadow-sm border border-yellow-100">
+            {note.content}
           </li>
         ))}
       </ul>

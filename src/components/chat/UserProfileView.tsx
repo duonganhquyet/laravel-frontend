@@ -7,6 +7,7 @@ import { useAuthStore } from '../../store/auth.store';
 import { useToastStore } from '../../store/toast.store';
 import { useSocket } from '../../hooks/useSocket';
 import { useConfirmStore } from '../../store/confirm.store';
+import { useOnlineStore } from '../../store/online.store';
 
 interface UserProfileViewProps {
   user: User;
@@ -21,6 +22,8 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ user, onStartC
   const [isLoading, setIsLoading] = useState(true);
   const [isActionLoading, setIsActionLoading] = useState(false);
   const { echo, onEvent } = useSocket();
+  const { onlineUserIds } = useOnlineStore();
+  const isOnline = onlineUserIds.includes(String(user._id)) || onlineUserIds.includes(String(user.id));
 
   const fetchStatus = async () => {
     setIsLoading(true);
@@ -139,7 +142,7 @@ export const UserProfileView: React.FC<UserProfileViewProps> = ({ user, onStartC
           <div className="w-32 h-32 rounded-full bg-gradient-to-tr from-blue-500 to-indigo-500 flex items-center justify-center text-white font-bold text-5xl shadow-lg border-4 border-white">
             {user.fullName.charAt(0).toUpperCase()}
           </div>
-          {user.isOnline && (
+          {isOnline && (
             <div className="absolute bottom-2 right-2 w-6 h-6 bg-emerald-500 border-4 border-white rounded-full shadow-sm"></div>
           )}
         </div>

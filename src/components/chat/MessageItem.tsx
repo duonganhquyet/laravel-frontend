@@ -207,7 +207,7 @@ export const MessageItem: React.FC<MessageItemProps> = ({ message, isMine, conve
     (new Date(message.updatedAt).getTime() - new Date(message.createdAt).getTime() > 1000);
 
   return (
-    <div className={`flex w-full mb-6 group animate-fade-in-up ${isMine ? 'justify-end' : 'justify-start'}`}>
+    <div id={`message-${message._id}`} className={`flex w-full mb-6 group animate-fade-in-up ${isMine ? 'justify-end' : 'justify-start'}`}>
       {!isMine && (
         <div 
           onClick={() => { if (onAvatarClick && message.sender?._id) onAvatarClick(message.sender._id); }}

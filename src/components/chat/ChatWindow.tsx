@@ -4,6 +4,7 @@ import { messageApi } from '../../api/message.api';
 import type { Message } from '../../types/message.type';
 import { useSocket } from '../../hooks/useSocket';
 import { useAuthStore } from '../../store/auth.store';
+import { useToastStore } from '../../store/toast.store';
 import MessageInput from './MessageInput';
 import { mapBackendMessage, mapBackendMessages, type BackendMessage } from '../../lib/messageMapper';
 import { conversationApi, noteApi } from '../../api/conversation.api';
@@ -19,9 +20,11 @@ interface ChatWindowProps {
   onAvatarClick?: (userId: string) => void;
   onRefreshParticipants?: () => void;
   onCloseChat?: () => void;
+  targetMessageId?: string;
+  onMessageScrolled?: () => void;
 }
 
-export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversation, participants, onAvatarClick, onRefreshParticipants, onCloseChat }) => {
+export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversation, participants, onAvatarClick, onRefreshParticipants, onCloseChat, targetMessageId, onMessageScrolled }) => {
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<Message[]>([]);
   const [error, setError] = useState<string>('');
@@ -280,6 +283,30 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({ conversationId, conversa
       }
     }
   }, [messages, user, isLoading]);
+
+  const [searchAttempt, setSearchAttempt] = useState(0);
+
+  useEffect(() => {
+    if (!targetMessageId || isLoading) return;
+
+    const el = document.getElementById(`message-${targetMessageId}`);
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      el.classList.add('bg-indigo-50', 'transition-colors', 'duration-1000');
+      setTimeout(() => el.classList.remove('bg-indigo-50'), 2000);
+      onMessageScrolled?.();
+      setSearchAttempt(0);
+    } else {
+      if (hasMore && !isLoadingMore && searchAttempt < 10) {
+        setSearchAttempt(prev => prev + 1);
+        loadMoreMessages();
+      } else if (searchAttempt >= 10 || !hasMore) {
+        useToastStore.getState().error('Không thể tìm thấy tin nhắn trong lịch sử gần đây.');
+        onMessageScrolled?.();
+        setSearchAttempt(0);
+      }
+    }
+  }, [targetMessageId, messages, isLoading, hasMore, isLoadingMore, searchAttempt, onMessageScrolled]);
 
   return (
     <div className="absolute inset-0 flex flex-col bg-transparent">

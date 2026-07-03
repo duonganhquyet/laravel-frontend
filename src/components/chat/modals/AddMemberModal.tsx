@@ -8,9 +8,10 @@ import { AxiosError } from 'axios';
 interface AddMemberModalProps {
   conversationId: string;
   onClose: () => void;
+  onRefresh?: () => void;
 }
 
-export const AddMemberModal: React.FC<AddMemberModalProps> = ({ conversationId, onClose }) => {
+export const AddMemberModal: React.FC<AddMemberModalProps> = ({ conversationId, onClose, onRefresh }) => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [friends, setFriends] = useState<User[]>([]);
   const [searchFriend, setSearchFriend] = useState('');
@@ -58,6 +59,7 @@ export const AddMemberModal: React.FC<AddMemberModalProps> = ({ conversationId, 
     try {
       await participantApi.addMember(conversationId, selectedUser._id);
       setSuccess(`Đã thêm ${selectedUser.fullName} vào nhóm thành công!`);
+      if (onRefresh) onRefresh();
       setTimeout(() => {
         onClose();
       }, 1500);

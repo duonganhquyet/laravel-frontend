@@ -6,9 +6,10 @@ import { mapBackendMessage } from "../../lib/messageMapper";
 interface MessageSearchProps {
   conversationId: string;
   onClose: () => void;
+  onMessageClick?: (messageId: string) => void;
 }
 
-export const MessageSearch: React.FC<MessageSearchProps> = ({ conversationId, onClose }) => {
+export const MessageSearch: React.FC<MessageSearchProps> = ({ conversationId, onClose, onMessageClick }) => {
   const [q, setQ] = useState<string>("");
   const [type, setType] = useState<string>("all");
   const [results, setResults] = useState<Message[]>([]);
@@ -90,7 +91,13 @@ export const MessageSearch: React.FC<MessageSearchProps> = ({ conversationId, on
         )}
 
         {!isSearching && results.map((m) => (
-          <div key={m._id} className="p-3 mb-1 bg-white hover:bg-slate-50 border border-transparent hover:border-slate-100 rounded-xl transition-all cursor-pointer group">
+          <div 
+            key={m._id} 
+            className="p-3 mb-1 bg-white hover:bg-slate-50 border border-transparent hover:border-slate-100 rounded-xl transition-all cursor-pointer group"
+            onClick={() => {
+              if (onMessageClick) onMessageClick(m._id);
+            }}
+          >
             <div className="flex justify-between items-center mb-1">
               <span className="text-xs font-semibold text-blue-600 truncate">{m.sender?.fullName}</span>
               <span className="text-[10px] text-slate-400">

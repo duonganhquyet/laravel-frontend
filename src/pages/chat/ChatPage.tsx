@@ -62,6 +62,7 @@ export const ChatPage: React.FC = () => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [participants, setParticipants] = useState<ConversationParticipant[]>([]);
   const [toasts, setToasts] = useState<ToastNotification[]>([]);
+  const [targetMessageIdToScroll, setTargetMessageIdToScroll] = useState<string | undefined>();
 
   // Lifted Sidebar States
   const [friends, setFriends] = useState<User[]>([]);
@@ -287,7 +288,14 @@ export const ChatPage: React.FC = () => {
 
               {isSearchOpen && activeConversationId && !isGroupClosed && (
                 <div className="absolute top-16 right-0 z-30 mr-4 mt-2">
-                  <MessageSearch conversationId={activeConversationId} onClose={() => setIsSearchOpen(false)} />
+                  <MessageSearch 
+                    conversationId={activeConversationId} 
+                    onClose={() => setIsSearchOpen(false)} 
+                    onMessageClick={(msgId) => {
+                      setTargetMessageIdToScroll(msgId);
+                      setIsSearchOpen(false);
+                    }}
+                  />
                 </div>
               )}
 
@@ -308,6 +316,8 @@ export const ChatPage: React.FC = () => {
                       conversation={activeConversation} 
                       conversationId={activeConversationId} 
                       participants={participants}
+                      targetMessageId={targetMessageIdToScroll}
+                      onMessageScrolled={() => setTargetMessageIdToScroll(undefined)}
                       onRefreshParticipants={() => { fetchParticipants(activeConversationId); fetchConversations(false); }}
                       onAvatarClick={handleViewUserProfile}
                       onCloseChat={() => {
